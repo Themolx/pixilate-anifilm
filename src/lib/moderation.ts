@@ -2,14 +2,15 @@
 // if it looks explicit. Fail-open on load/classify errors — staffer watching /admin
 // is the backup defense.
 //
-// nsfwjs + tfjs are loaded from jsdelivr at runtime (not bundled). nsfwjs eagerly
-// imports 3 model variants via dynamic imports, which Vite resolves to 30MB of
-// chunks if bundled normally — CDN loading keeps our bundle lean.
+// Library (nsfwjs/core) and tfjs load from jsdelivr at runtime (not bundled —
+// avoids Vite eagerly shipping all 3 model variants as 30MB of chunks).
+// Model weights are self-hosted under /public/nsfw-model so the festival isn't
+// dependent on a third-party CDN for the hot path.
 
-import type * as NSFW from 'nsfwjs'
+import type * as NSFWJS from 'nsfwjs'
 
-type NSFWModule = typeof NSFW
-type Model = Awaited<ReturnType<NSFWModule['load']>>
+type LoadFn = typeof NSFWJS.load
+type Model = Awaited<ReturnType<LoadFn>>
 
 const NSFWJS_CDN = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm'
 
@@ -18,8 +19,11 @@ let modelPromise: Promise<Model> | null = null
 export function loadModel(): Promise<Model> {
   if (!modelPromise) {
     modelPromise = (async () => {
-      const nsfw = (await import(/* @vite-ignore */ NSFWJS_CDN)) as NSFWModule
-      return nsfw.load()
+      const mod = (await import(/* @vite-ignore */ NSFWJS_CDN)) as { load: LoadFn }
+      const base = import.meta.env.BASE_URL.endsWith('/')
+        ? import.meta.env.BASE_URL
+        : `${import.meta.env.BASE_URL}/`
+      return mod.load(`${base}nsfw-model/model.json`)
     })().catch(err => {
       modelPromise = null
       throw err
