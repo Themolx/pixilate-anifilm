@@ -1,0 +1,94 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { listFrames, subscribeFrames } from '../lib/db'
+import { framePublicUrl } from '../lib/supabase'
+import type { Frame } from '../lib/types'
+import { Timeline } from './Timeline'
+
+const FPS_OPTIONS = [6, 8, 12, 24] as const
+
+export function PlaybackView() {
+  const navigate = useNavigate()
+  const [frames, setFrames] = useState<Frame[]>([])
+  const [loading, setLoading] = useState(true)
+  const [idx, setIdx] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [fps, setFps] = useState<number>(12)
+
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const f = await listFrames()
+        if (!live) return
+        setFrames(f)
+      } finally {
+        if (live) setLoading(false)
+      }
+    })()
+    return () => { live = false }
+  }, [])
+
+  // Realtime append: new frames during playback get added live
+  useEffect(() => {
+    const unsub = subscribeFrames(ev => {
+      setFrames(prev => {
+        if (ev.type === 'INSERT') {
+          if (prev.some(f => f.id === ev.frame.id)) return prev
+          return [...prev, ev.frame].sort((a, b) => a.seq - b.seq)
+        }
+        return prev
+          .map(f => (f.id === ev.frame.id ? ev.frame : f))
+          .filter(f => !f.deleted_at)
+      })
+    })
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    if (!playing || frames.length === 0) return
+    const interval = setInterval(() => {
+      setIdx(prev => {
+        const next = prev + 1
+        if (next >= frames.length) {
+          setPlaying(false)
+          return frames.length - 1
+        }
+        return next
+      })
+    }, Math.round(1000 / fps))
+    return () => clearInterval(interval)
+  }, [playing, fps, frames.length])
+
+  if (loading) return <div className="loading">Loading…</div>
+  if (frames.length === 0) {
+    return (
+      <div className="session-picker">
+        <h1>No frames yet</h1>
+        <button className="primary" onClick={() => navigate('/')}>Back to camera</button>
+      </div>
+    )
+  }
+
+  const current = frames[Math.min(idx, frames.length - 1)]
+
+  return (
+    <div className="playback-overlay">
+      <img src={framePublicUrl(current.storage_path)} alt={`Frame ${idx + 1}`} />
+      <div className="playback-controls">
+        <button onClick={() => { if (playing) setPlaying(false); else { setIdx(0); setPlaying(true) } }}>
+          {playing ? '⏸ Pause' : '▶ Play'}
+        </button>
+        <span>{idx + 1} / {frames.length}</span>
+        <label className="fps-select">
+          FPS
+          <select value={fps} onChange={e => setFps(Number(e.target.value))}>
+            {FPS_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </label>
+        <button onClick={() => navigate('/')}>✕ Close</button>
+      </div>
+      <Timeline frames={frames} currentIndex={idx} onSelect={i => { setPlaying(false); setIdx(i) }} />
+    </div>
+  )
+}

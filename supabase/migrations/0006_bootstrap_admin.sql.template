@@ -1,0 +1,12 @@
+-- One-time admin bootstrap. Not run by migrations — edit, then paste into
+-- the Supabase SQL editor (service role) after the admin has done their first
+-- magic-link login.
+--
+-- 1. User logs in at #/admin with their email.
+-- 2. They see "Not authorized" (expected — no admin row yet).
+-- 3. Dashboard → Authentication → Users → copy the user's uuid.
+-- 4. Run this file with the real values:
+
+insert into public.admins (user_id, email)
+values ('PASTE_UUID_HERE', 'admin@example.com')
+on conflict (user_id) do nothing;
