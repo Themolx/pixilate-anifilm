@@ -33,6 +33,7 @@ export function CameraView() {
   const [throttleMs, setThrottleMs] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
+  const [isLandscape, setIsLandscape] = useState(false)
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
@@ -72,18 +73,36 @@ export function CameraView() {
     }
   }, [startCamera])
 
-  // Init logger + warm up NSFW model + lock orientation
+  // Init logger + warm up NSFW model + detect orientation
   useEffect(() => {
     logger.log('info', 'SYSTEM', `CameraView started (device: ${getDeviceId()})`)
     loadModel().catch(err => {
       logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
 
-    // Lock to portrait mode on mobile if available
+    // Detect orientation changes
+    const handleOrientationChange = () => {
+      const isLand = window.innerHeight < window.innerWidth
+      setIsLandscape(isLand)
+      if (isLand) {
+        logger.log('info', 'SYSTEM', 'Landscape detected - please rotate to portrait')
+      }
+    }
+
+    window.addEventListener('orientationchange', handleOrientationChange)
+    window.addEventListener('resize', handleOrientationChange)
+    handleOrientationChange() // Check initial orientation
+
+    // Try to lock orientation if supported
     if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
-      (screen.orientation as any).lock('portrait').catch(() => {
-        logger.log('info', 'SYSTEM', 'Portrait lock not supported on this device')
+      (screen.orientation as any).lock('portrait-primary').catch(() => {
+        logger.log('info', 'SYSTEM', 'Portrait lock not supported')
       })
+    }
+
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange)
+      window.removeEventListener('resize', handleOrientationChange)
     }
   }, [])
 
@@ -434,14 +453,11 @@ export function CameraView() {
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 150ms ease',
-            opacity: 0.6
+            opacity: 0.6,
+            fontSize: 18
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M1 4v6h6M23 20v-6h-6" />
-            <path d="M20.362 4.431A9 9 0 0 0 3.638 19.569" />
-            <path d="M3.638 4.431A9 9 0 0 1 20.362 19.569" />
-          </svg>
+          {facingMode === 'environment' ? '📷' : '🤳'}
         </button>
       </div>
 
@@ -486,6 +502,31 @@ export function CameraView() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {isLandscape && (
+        <motion.div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            flexDirection: 'column',
+            gap: 20,
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <div style={{ textAlign: 'center', color: '#fff' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📱</div>
+            <h2 style={{ margin: '0 0 12px 0', fontSize: 24 }}>Please rotate to portrait</h2>
+            <p style={{ margin: 0, fontSize: 16, opacity: 0.8 }}>This app works best in portrait mode</p>
+          </div>
+        </motion.div>
+      )}
 
       {cameraError && (
         <motion.div
