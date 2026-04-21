@@ -5,16 +5,25 @@ import { logger, type LogEntry } from '../lib/logger'
 export function LogsView() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const pollIntervalRef = useRef<number | null>(null)
 
   useEffect(() => {
+    // Initial load
     setLogs(logger.getLogs())
 
+    // Subscribe to new entries
     const unsub = logger.subscribe(entry => {
       setLogs(prev => [...prev, entry])
     })
 
+    // Polling fallback: refresh every 500ms to catch any missed updates
+    pollIntervalRef.current = window.setInterval(() => {
+      setLogs([...logger.getLogs()])
+    }, 500)
+
     return () => {
       unsub()
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
     }
   }, [])
 

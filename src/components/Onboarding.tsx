@@ -16,7 +16,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewLoading, setPreviewLoading] = useState(true)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
-  const [previewPlayed, setPreviewPlayed] = useState(false)
+  const [previewPlayCount, setPreviewPlayCount] = useState(0)
   const animationIntervalRef = useRef<number | null>(null)
   const imagePreloadRef = useRef<Map<string, HTMLImageElement>>(new Map())
 
@@ -61,9 +61,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })()
   }, [])
 
-  // Animation loop for preview — play once, then auto-advance
+  // Animation loop for preview — play 3 times at 6fps, then auto-advance
   useEffect(() => {
-    if (step !== 'preview' || previewFrames.length === 0 || previewPlayed) return
+    if (step !== 'preview' || previewFrames.length === 0 || previewPlayCount >= 3) return
 
     // Wait for all images to be preloaded
     let loadedCount = 0
@@ -82,9 +82,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         frameIdx++
         setCurrentFrameIndex(frameIdx)
         if (frameIdx >= previewFrames.length - 1) {
-          if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-          setPreviewPlayed(true)
-          setTimeout(() => setStep('camera'), 500)
+          // Loop 3 times total
+          if (previewPlayCount + 1 < 3) {
+            setPreviewPlayCount(prev => prev + 1)
+            frameIdx = -1
+          } else {
+            if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
+            setTimeout(() => setStep('camera'), 500)
+          }
         }
       }, 1000 / 6)
     }
@@ -94,7 +99,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     return () => {
       if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
     }
-  }, [step, previewFrames, previewPlayed])
+  }, [step, previewFrames, previewPlayCount])
 
   async function requestCamera() {
     setCameraError(null)
@@ -180,20 +185,22 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               <p className="onboard-body">Loading preview…</p>
             ) : previewError ? (
               <p className="onboard-body">Could not load preview: {previewError}</p>
-            ) : previewFrames.length > 0 && !previewPlayed ? (
+            ) : previewFrames.length > 0 && previewPlayCount < 3 ? (
               <>
-                <motion.div className="onboarding-animation">
-                  <motion.img
-                    key={currentFrameIndex}
-                    src={previewFrames[currentFrameIndex]}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    alt=""
-                  />
-                </motion.div>
-                <p className="onboard-tag">Playing {previewFrames.length} frames at 12fps…</p>
+                <div className="onboarding-animation" style={{ position: 'relative' }}>
+                  <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                  {currentFrameIndex > 0 && (
+                    <motion.img
+                      src={previewFrames[currentFrameIndex - 1]}
+                      alt=""
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: 0 }}
+                      transition={{ duration: 0.08 }}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                    />
+                  )}
+                </div>
+                <p className="onboard-tag">Playing {previewFrames.length} frames at 6fps (loop {previewPlayCount + 1}/3)</p>
               </>
             ) : (
               <p className="onboard-body">Ready for next step…</p>

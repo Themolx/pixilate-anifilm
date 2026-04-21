@@ -31,7 +31,9 @@ export function CameraView() {
   const [previewFrames, setPreviewFrames] = useState<string[]>([])
   const [previewIndex, setPreviewIndex] = useState(0)
   const [throttleMs, setThrottleMs] = useState(0)
+  const [zoom, setZoom] = useState(1)
   const previewIntervalRef = useRef<number | null>(null)
+  const lastDistanceRef = useRef(0)
 
   const startCamera = useCallback(async () => {
     setCameraError(null)
@@ -291,11 +293,62 @@ export function CameraView() {
     }
   }
 
+  function handleTouchMove(e: React.TouchEvent) {
+    if (e.touches.length !== 2) return
+    const [t1, t2] = [e.touches[0], e.touches[1]]
+    const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+
+    if (lastDistanceRef.current === 0) {
+      lastDistanceRef.current = distance
+      return
+    }
+
+    const ratio = distance / lastDistanceRef.current
+    setZoom(prev => Math.max(1, Math.min(3, prev * ratio)))
+    lastDistanceRef.current = distance
+  }
+
+  function handleTouchEnd() {
+    lastDistanceRef.current = 0
+  }
+
   return (
     <div className="app">
-      <div className="viewport">
-        <video ref={videoRef} autoPlay playsInline muted />
+      <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
+
+        {/* Zoom controls */}
+        <div style={{
+          position: 'absolute',
+          bottom: 80,
+          right: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          zIndex: 5
+        }}>
+          {[1, 2, 3].map(z => (
+            <button
+              key={z}
+              onClick={() => setZoom(z)}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: zoom === z ? '2px solid var(--accent)' : '2px solid var(--text)',
+                background: zoom === z ? 'var(--accent)' : 'transparent',
+                color: zoom === z ? '#fff' : 'var(--text)',
+                fontWeight: '600',
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'all 150ms ease'
+              }}
+            >
+              {z}x
+            </button>
+          ))}
+        </div>
         {flash && <div className="capture-flash" />}
       </div>
 
@@ -363,16 +416,21 @@ export function CameraView() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            style={{ position: 'relative' }}
           >
-            <motion.img
-              key={previewIndex}
-              src={previewFrames[previewIndex]}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              alt=""
-            />
+            {/* Current frame - always visible */}
+            <img src={previewFrames[previewIndex]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            {/* Previous frame - fades out on top */}
+            {previewIndex > 0 && (
+              <motion.img
+                src={previewFrames[previewIndex - 1]}
+                alt=""
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.08 }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+              />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
