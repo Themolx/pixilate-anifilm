@@ -327,7 +327,7 @@ export function CameraView() {
   return (
     <div className="app">
       <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
-        <video ref={videoRef} autoPlay playsInline muted style={{ transform: `${facingMode === 'environment' ? 'scaleX(-1)' : ''} scale(${zoom})` }} />
+        <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
 
         {/* Frame counter at top */}
@@ -428,11 +428,13 @@ export function CameraView() {
             justifyContent: 'center',
             transition: 'all 150ms ease',
             opacity: 0.6,
-            fontSize: 16,
-            fontWeight: '600'
+            fontSize: 20,
+            fontWeight: '400',
+            lineHeight: 1,
+            padding: 0
           }}
         >
-          {facingMode === 'environment' ? '⟲' : '⟳'}
+          ↻
         </button>
       </div>
 
