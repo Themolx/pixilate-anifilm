@@ -222,16 +222,18 @@ input, select { font-family: inherit; }
 
 /* ---------- camera / app ---------- */
 .app {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   width: 100%;
-  background: #000;
+  position: relative;
+  background: var(--bg);
   overflow: hidden;
 }
 
 .viewport-wrap {
-  position: absolute;
-  inset: 0;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -240,9 +242,8 @@ input, select { font-family: inherit; }
 }
 
 .viewport {
-  aspect-ratio: 9 / 16;
-  height: 100%;
-  width: auto;
+  aspect-ratio: 1 / 1;
+  width: 100%;
   max-width: 100%;
   max-height: 100%;
   position: relative;
@@ -279,29 +280,15 @@ input, select { font-family: inherit; }
   to { opacity: 0; }
 }
 
-/* ---------- onion control bar (floating above main controls) ---------- */
+/* ---------- onion control bar (above main controls, white UI) ---------- */
 .onion-control-bar {
-  position: absolute;
-  left: 50%;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 6px 14px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  max-width: calc(100% - 24px);
-  z-index: 20;
-  animation: slideUp 300ms ease-out;
-}
-
-.onion-control-bar .onion-icon {
-  color: #fff;
+  padding: 10px 16px 6px;
+  background: var(--bg);
+  max-width: 100%;
 }
 
 @keyframes slideUp {
@@ -327,11 +314,11 @@ input, select { font-family: inherit; }
 }
 
 .onion-control-bar input {
-  width: 140px;
+  width: 160px;
   height: 5px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--bg-sunken);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -358,19 +345,14 @@ input, select { font-family: inherit; }
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* ---------- controls bar (main, floating overlay) ---------- */
+/* ---------- controls bar (main, white UI under viewport) ---------- */
 .controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 10px 18px calc(14px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0));
+  padding: 8px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
   gap: 10px;
-  z-index: 20;
 }
 
 .controls-group {
@@ -380,41 +362,49 @@ input, select { font-family: inherit; }
 }
 
 .preview-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  font-size: 18px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
   cursor: pointer;
   transition: all 150ms ease;
+  padding: 0;
 }
 
 .preview-btn:active {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--bg-sunken);
+  border-color: var(--accent);
 }
 
 .preview-btn:disabled {
   opacity: 0.4;
 }
 
+.preview-btn .rewind-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 .capture-btn {
-  width: 68px;
-  height: 68px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
-  border: 4px solid #fff;
+  border: 3px solid var(--text);
   background: transparent;
   position: relative;
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .capture-btn::after {

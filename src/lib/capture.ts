@@ -23,10 +23,9 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
 }
 
 function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean) {
-  // Always save full 9:16 frame. Zoom is display-only (like animation software):
-  // the stored file is immutable so live view and onion skin always reference
-  // the same underlying pixels.
-  const targetRatio = 9 / 16
+  // Always save square (1:1). Zoom is display-only — stored file is immutable
+  // so live view and onion skin always reference the same underlying pixels.
+  const targetRatio = 1
   const sourceRatio = sw / sh
 
   let cropW = sw

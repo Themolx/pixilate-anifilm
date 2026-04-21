@@ -468,11 +468,14 @@ export function CameraView() {
             className="preview-btn"
             onClick={handlePreviewOpen}
             disabled={frames.length === 0}
-            title="Preview last 2 seconds"
-            aria-label="Preview"
+            title="Rewind last 2 seconds"
+            aria-label="Rewind 2s"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style={{ margin: '0 auto' }}>
-              <polygon points="4,2 4,18 16,10" />
+            <span className="rewind-label">2s</span>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              {/* Rewind icon: two left-pointing triangles */}
+              <polygon points="10,3 10,17 2,10" />
+              <polygon points="18,3 18,17 10,10" />
             </svg>
           </button>
         </div>
@@ -490,23 +493,21 @@ export function CameraView() {
           title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
           aria-label="Flip camera"
           style={{
-            width: 44,
-            height: 44,
+            width: 52,
+            height: 52,
             borderRadius: '50%',
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            color: '#fff',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            background: 'var(--bg-raised)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 150ms ease',
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: '400',
             lineHeight: 1,
-            padding: 0
+            padding: 0,
           }}
         >
           ↻
