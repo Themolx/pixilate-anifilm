@@ -17,7 +17,6 @@ export function CameraView() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const tintCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map())
 
   const [frames, setFrames] = useState<Frame[]>([])
   const [cameraReady, setCameraReady] = useState(false)
@@ -33,6 +32,7 @@ export function CameraView() {
   const [throttleMs, setThrottleMs] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
+  const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
@@ -134,7 +134,9 @@ export function CameraView() {
     return () => clearInterval(timer)
   }, [throttleMs])
 
-  // Onion skin
+  // Onion skin — draws last frame tinted green over live camera.
+  // Why inline + retry: the row is inserted BEFORE the blob upload finishes,
+  // so a fresh realtime INSERT can 404 the image briefly. We retry a few times.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -146,26 +148,57 @@ export function CameraView() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     if (frames.length === 0) return
-
     const lastFrame = frames[frames.length - 1]
     if (!lastFrame) return
 
+    // Prefer local blob for our own capture — avoids the upload race on slow networks.
+    const url = localCapture && localCapture.id === lastFrame.id
+      ? localCapture.url
+      : framePublicUrl(lastFrame.storage_path)
     let cancelled = false
-    ;(async () => {
-      const tinted = await getTinted(lastFrame.storage_path, tintCacheRef.current)
-      if (cancelled || !tinted) return
+    let retryTimer: number | null = null
 
-      ctx.globalAlpha = Math.max(0.1, onionOpacity)
-      const scale = Math.max(canvas.width / tinted.width, canvas.height / tinted.height)
-      const w = tinted.width * scale
-      const h = tinted.height * scale
-      ctx.drawImage(tinted, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
-      ctx.globalAlpha = 1
-    })()
+    const attempt = (tryNum: number) => {
+      if (cancelled) return
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        if (cancelled) return
+        canvas.width = canvas.offsetWidth * window.devicePixelRatio
+        canvas.height = canvas.offsetHeight * window.devicePixelRatio
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        const off = document.createElement('canvas')
+        off.width = canvas.width
+        off.height = canvas.height
+        const offCtx = off.getContext('2d')!
+        const scale = Math.max(canvas.width / img.width, canvas.height / img.height)
+        const w = img.width * scale
+        const h = img.height * scale
+        offCtx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
+        offCtx.globalCompositeOperation = 'multiply'
+        offCtx.fillStyle = '#44ff88'
+        offCtx.fillRect(0, 0, off.width, off.height)
+        offCtx.globalCompositeOperation = 'source-over'
+
+        ctx.globalAlpha = onionOpacity
+        ctx.drawImage(off, 0, 0)
+        ctx.globalAlpha = 1
+      }
+      img.onerror = () => {
+        if (cancelled || tryNum >= 6) return
+        retryTimer = window.setTimeout(() => attempt(tryNum + 1), 400 * (tryNum + 1))
+      }
+      img.src = url
+    }
+
+    attempt(0)
+
     return () => {
       cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [frames, onionOpacity])
+  }, [frames, onionOpacity, localCapture])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
@@ -253,6 +286,11 @@ export function CameraView() {
       }
 
       const { id, fullPath, thumbPath } = buildFramePaths()
+      const blobUrl = URL.createObjectURL(cap.full)
+      setLocalCapture(prev => {
+        if (prev) URL.revokeObjectURL(prev.url)
+        return { id, url: blobUrl }
+      })
       logger.log('info', 'UPLOAD', `Inserting row: ${id}`)
       await insertFrameRow({
         id,
@@ -507,44 +545,3 @@ export function CameraView() {
   )
 }
 
-async function getTinted(
-  path: string,
-  cache: Map<string, HTMLCanvasElement>,
-): Promise<HTMLCanvasElement | null> {
-  const cached = cache.get(path)
-  if (cached) return cached
-  try {
-    const img = await loadImage(framePublicUrl(path))
-    const maxW = 640
-    const scale = Math.min(1, maxW / img.width)
-    const w = Math.round(img.width * scale)
-    const h = Math.round(img.height * scale)
-    const off = document.createElement('canvas')
-    off.width = w
-    off.height = h
-    const ctx = off.getContext('2d')!
-    ctx.drawImage(img, 0, 0, w, h)
-    ctx.globalCompositeOperation = 'multiply'
-    ctx.fillStyle = '#44ff88'
-    ctx.fillRect(0, 0, w, h)
-    ctx.globalCompositeOperation = 'source-over'
-    cache.set(path, off)
-    if (cache.size > 12) {
-      const firstKey = cache.keys().next().value
-      if (firstKey) cache.delete(firstKey)
-    }
-    return off
-  } catch {
-    return null
-  }
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('image load failed'))
-    img.src = src
-  })
-}
