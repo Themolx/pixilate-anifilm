@@ -25,15 +25,31 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
 
 function drawScaled(source: CanvasImageSource, sw: number, sh: number, targetW: number) {
   const scale = Math.min(1, targetW / sw)
-  const w = Math.round(sw * scale)
-  const h = Math.round(sh * scale)
+  let w = Math.round(sw * scale)
+  let h = Math.round(sh * scale)
+
+  // Enforce 9:16 aspect ratio (portrait)
+  const targetRatio = 9 / 16
+  const currentRatio = w / h
+  if (currentRatio > targetRatio) {
+    // Too wide, constrain width
+    w = Math.round(h * targetRatio)
+  } else if (currentRatio < targetRatio) {
+    // Too tall, constrain height
+    h = Math.round(w / targetRatio)
+  }
+
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2d context unavailable')
   ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(source, 0, 0, w, h)
+
+  // Center crop from source
+  const sx = (sw - (sw * w / w)) / 2
+  const sy = (sh - (sh * h / h)) / 2
+  ctx.drawImage(source, sx, sy, Math.round(sw * w / w), Math.round(sh * h / h), 0, 0, w, h)
   return canvas
 }
 

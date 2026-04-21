@@ -352,7 +352,8 @@ export function CameraView() {
                 fontSize: 12,
                 cursor: 'pointer',
                 transition: 'all 150ms ease',
-                padding: 0
+                padding: 0,
+                opacity: 0.5
               }}
             >
               {z}x
@@ -409,10 +410,10 @@ export function CameraView() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
           >
             {/* Current frame - always visible */}
-            <img src={previewFrames[previewIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            <img src={previewFrames[previewIndex]} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
             {/* Previous frame - fades out on top */}
             {previewIndex > 0 && (
               <motion.img
@@ -421,7 +422,7 @@ export function CameraView() {
                 initial={{ opacity: 1 }}
                 animate={{ opacity: 0 }}
                 transition={{ duration: 0.08 }}
-                style={{ position: 'absolute', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
               />
             )}
           </motion.div>
