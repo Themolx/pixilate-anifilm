@@ -11,7 +11,7 @@ import { logger } from '../lib/logger'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
-const PREVIEW_FPS = 12
+const PREVIEW_FPS = 6
 
 export function CameraView() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -369,7 +369,9 @@ export function CameraView() {
               src={previewFrames[previewIndex]}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.05 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              alt=""
             />
           </motion.div>
         )}

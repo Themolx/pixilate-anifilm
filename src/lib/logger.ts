@@ -50,3 +50,6 @@ class LogStore {
 }
 
 export const logger = new LogStore()
+
+// Log initialization
+logger.log('info', 'SYSTEM', 'Logger initialized')

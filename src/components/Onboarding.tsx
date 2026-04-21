@@ -86,7 +86,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           setPreviewPlayed(true)
           setTimeout(() => setStep('camera'), 500)
         }
-      }, 1000 / 12)
+      }, 1000 / 6)
     }
 
     checkLoaded()
@@ -188,7 +188,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                     src={previewFrames[currentFrameIndex]}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.05 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     alt=""
                   />
                 </motion.div>
