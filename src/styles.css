@@ -69,7 +69,7 @@ input, select { font-family: inherit; }
 .onboarding {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   min-height: 100%;
   padding: 32px 24px;
@@ -79,10 +79,12 @@ input, select { font-family: inherit; }
 .onboard-step {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 20px;
   animation: fadeIn 300ms ease-out;
   max-width: 400px;
+  width: 100%;
+  text-align: left;
 }
 
 @keyframes fadeIn {
@@ -111,14 +113,14 @@ input, select { font-family: inherit; }
 
 .onboard-tag {
   color: var(--text-muted);
-  text-align: center;
+  text-align: left;
   font-size: 14px;
   line-height: 1.4;
 }
 
 .onboard-body {
   color: var(--text-muted);
-  text-align: center;
+  text-align: left;
   font-size: 15px;
   line-height: 1.6;
 }
@@ -131,7 +133,7 @@ input, select { font-family: inherit; }
   border: 1px solid var(--border);
   color: var(--text);
   font-size: 16px;
-  text-align: center;
+  text-align: left;
   border-radius: 6px;
 }
 
@@ -220,16 +222,16 @@ input, select { font-family: inherit; }
 
 /* ---------- camera / app ---------- */
 .app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
   position: relative;
-  background: var(--bg);
+  height: 100%;
+  width: 100%;
+  background: #000;
+  overflow: hidden;
 }
 
 .viewport-wrap {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -277,20 +279,29 @@ input, select { font-family: inherit; }
   to { opacity: 0; }
 }
 
-/* ---------- onion control bar (above main controls) ---------- */
+/* ---------- onion control bar (floating above main controls) ---------- */
 .onion-control-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 6px 14px;
-  background: var(--controls-bg);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  margin: 8px auto 2px;
   max-width: calc(100% - 24px);
+  z-index: 20;
   animation: slideUp 300ms ease-out;
+}
+
+.onion-control-bar .onion-icon {
+  color: #fff;
 }
 
 @keyframes slideUp {
@@ -316,11 +327,11 @@ input, select { font-family: inherit; }
 }
 
 .onion-control-bar input {
-  width: 120px;
+  width: 140px;
   height: 5px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--bg-sunken);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -347,14 +358,19 @@ input, select { font-family: inherit; }
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* ---------- controls bar (main) ---------- */
+/* ---------- controls bar (main, floating overlay) ---------- */
 .controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 6px 18px 14px;
-  background: var(--bg);
+  padding: 10px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0));
   gap: 10px;
+  z-index: 20;
 }
 
 .controls-group {
@@ -367,10 +383,12 @@ input, select { font-family: inherit; }
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
   font-size: 18px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -379,20 +397,24 @@ input, select { font-family: inherit; }
 }
 
 .preview-btn:active {
-  background: var(--bg-sunken);
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.preview-btn:disabled {
+  opacity: 0.4;
 }
 
 .capture-btn {
-  width: 62px;
-  height: 62px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  border: 3px solid var(--text);
+  border: 4px solid #fff;
   background: transparent;
   position: relative;
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .capture-btn::after {

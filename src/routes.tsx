@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { CameraView } from './components/CameraView'
 import { PlaybackView } from './components/PlaybackView'
+import { FullView } from './components/FullView'
 import { Onboarding } from './components/Onboarding'
 import { LogsView } from './components/LogsView'
 import { isOnboarded } from './lib/onboarding'
@@ -24,6 +25,7 @@ function RoutesContent() {
       <Routes location={location} key={location.pathname}>
         <Route path="/"                element={<HomeGate />} />
         <Route path="/play"            element={<PlaybackView />} />
+        <Route path="/full"            element={<FullView />} />
         <Route path="/logs"            element={<LogsView />} />
         <Route path="/admin"           element={<AdminGate><AdminFrames /></AdminGate>} />
         <Route path="/admin/reports"   element={<AdminGate><AdminReports /></AdminGate>} />

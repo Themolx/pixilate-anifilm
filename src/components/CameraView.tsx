@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Frame } from '../lib/types'
 import { buildFramePaths, insertFrameRow, listFrames, subscribeFrames, uploadFrameBlobs } from '../lib/db'
@@ -16,6 +17,7 @@ const POLL_INTERVAL_MS = 10_000
 const PREVIEW_FPS = 6
 
 export function CameraView() {
+  const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -414,20 +416,31 @@ export function CameraView() {
           <span style={{ fontWeight: 600 }}>{topic}</span>
         </button>
 
-        {/* Frame counter at top */}
-        <div style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          fontSize: 14,
-          fontWeight: '600',
-          color: '#fff',
-          textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-          fontFamily: 'monospace',
-          zIndex: 10
-        }}>
-          {String(frames.length).padStart(3, '0')}
-        </div>
+        {/* Frame counter at top — tap to view the whole animation */}
+        <button
+          onClick={() => navigate('/full')}
+          title="View the whole animation"
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            padding: '5px 10px',
+            borderRadius: 999,
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#fff',
+            fontSize: 12,
+            fontFamily: 'monospace',
+            fontWeight: 600,
+            letterSpacing: 0.5,
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            cursor: 'pointer',
+            zIndex: 10,
+          }}
+        >
+          ▶ {String(frames.length).padStart(3, '0')}
+        </button>
 
         {flash && <div className="capture-flash" />}
       </div>
@@ -477,18 +490,19 @@ export function CameraView() {
           title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
           aria-label="Flip camera"
           style={{
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             borderRadius: '50%',
-            background: 'transparent',
-            border: '2px solid var(--text)',
-            color: 'var(--text)',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            color: '#fff',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 150ms ease',
-            opacity: 0.6,
             fontSize: 20,
             fontWeight: '400',
             lineHeight: 1,
@@ -554,23 +568,23 @@ export function CameraView() {
               position: 'fixed',
               inset: 0,
               zIndex: 60,
-              background: 'rgba(0,0,0,0.82)',
+              background: 'rgba(255,255,255,0.98)',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
               padding: 32,
-              textAlign: 'center',
+              textAlign: 'left',
               cursor: 'pointer',
             }}
           >
             <div style={{ color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
               {t('dailyTopicIntro')}
             </div>
-            <div style={{ color: '#fff', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
+            <div style={{ color: 'var(--text)', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
               {topic}
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, maxWidth: 320 }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 320 }}>
               {t('dailyTopicHint')}
             </div>
           </motion.div>
