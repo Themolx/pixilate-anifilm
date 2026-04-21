@@ -1,7 +1,6 @@
 // Capture a full JPEG + a ~240px-wide thumbnail from a playing <video>.
 // Re-encodes via canvas so EXIF is stripped on the way out.
 
-const FULL_MAX_WIDTH = 1280
 const THUMB_WIDTH = 240
 const FULL_QUALITY = 0.82
 const THUMB_QUALITY = 0.75
@@ -23,11 +22,7 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   })
 }
 
-function drawScaled(source: CanvasImageSource, sw: number, sh: number, targetW: number) {
-  const scale = Math.min(1, targetW / sw)
-  let w = Math.round(sw * scale)
-  let h = Math.round(sh * scale)
-
+function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean) {
   // Enforce 9:16 aspect ratio (portrait)
   const targetRatio = 9 / 16
   const sourceRatio = sw / sh
@@ -46,6 +41,16 @@ function drawScaled(source: CanvasImageSource, sw: number, sh: number, targetW: 
   const sx = (sw - cropW) / 2
   const sy = (sh - cropH) / 2
 
+  // Use full resolution for full image, scaled down for thumbnail only
+  let w = Math.round(cropW)
+  let h = Math.round(cropH)
+
+  if (isThumbnail) {
+    const scale = Math.min(1, THUMB_WIDTH / w)
+    w = Math.round(w * scale)
+    h = Math.round(h * scale)
+  }
+
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
@@ -63,8 +68,8 @@ export async function captureFrame(video: HTMLVideoElement): Promise<Capture> {
   const sh = video.videoHeight
   if (!sw || !sh) throw new Error('video not ready')
 
-  const fullCanvas = drawScaled(video, sw, sh, FULL_MAX_WIDTH)
-  const thumbCanvas = drawScaled(fullCanvas, fullCanvas.width, fullCanvas.height, THUMB_WIDTH)
+  const fullCanvas = drawCropped(video, sw, sh, false)
+  const thumbCanvas = drawCropped(video, sw, sh, true)
 
   const [full, thumb] = await Promise.all([
     toBlob(fullCanvas, FULL_QUALITY),
