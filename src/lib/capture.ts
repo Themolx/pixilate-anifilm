@@ -1,4 +1,4 @@
-// Capture a full JPEG + a ~240px-wide thumbnail from a playing <video>.
+// Capture a square (1:1) JPEG + a ~240px-wide thumbnail from a playing <video>.
 // Re-encodes via canvas so EXIF is stripped on the way out.
 
 const THUMB_WIDTH = 240
@@ -22,53 +22,35 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   })
 }
 
-function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean) {
-  // Always save square (1:1). Zoom is display-only — stored file is immutable
-  // so live view and onion skin always reference the same underlying pixels.
-  const targetRatio = 1
-  const sourceRatio = sw / sh
+function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean, zoom: number) {
+  // Square center-crop from the source. Zoom shrinks the source window (digital
+  // zoom), so the saved frame matches what the user sees in the zoomed viewport.
+  const baseSize = Math.min(sw, sh)
+  const cropSize = baseSize / Math.max(1, zoom)
+  const sx = (sw - cropSize) / 2
+  const sy = (sh - cropSize) / 2
 
-  let cropW = sw
-  let cropH = sh
-
-  if (sourceRatio > targetRatio) {
-    cropW = sh * targetRatio
-  } else if (sourceRatio < targetRatio) {
-    cropH = sw / targetRatio
-  }
-
-  const sx = (sw - cropW) / 2
-  const sy = (sh - cropH) / 2
-
-  // Use full resolution for full image, scaled down for thumbnail only
-  let w = Math.round(cropW)
-  let h = Math.round(cropH)
-
-  if (isThumbnail) {
-    const scale = Math.min(1, THUMB_WIDTH / w)
-    w = Math.round(w * scale)
-    h = Math.round(h * scale)
-  }
+  const outSize = isThumbnail
+    ? Math.min(THUMB_WIDTH, Math.round(baseSize))
+    : Math.round(baseSize)
 
   const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
+  canvas.width = outSize
+  canvas.height = outSize
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2d context unavailable')
   ctx.imageSmoothingQuality = 'high'
-
-  // Draw center-cropped source
-  ctx.drawImage(source, sx, sy, cropW, cropH, 0, 0, w, h)
+  ctx.drawImage(source, sx, sy, cropSize, cropSize, 0, 0, outSize, outSize)
   return canvas
 }
 
-export async function captureFrame(video: HTMLVideoElement): Promise<Capture> {
+export async function captureFrame(video: HTMLVideoElement, zoom = 1): Promise<Capture> {
   const sw = video.videoWidth
   const sh = video.videoHeight
   if (!sw || !sh) throw new Error('video not ready')
 
-  const fullCanvas = drawCropped(video, sw, sh, false)
-  const thumbCanvas = drawCropped(video, sw, sh, true)
+  const fullCanvas = drawCropped(video, sw, sh, false, zoom)
+  const thumbCanvas = drawCropped(video, sw, sh, true, zoom)
 
   const [full, thumb] = await Promise.all([
     toBlob(fullCanvas, FULL_QUALITY),

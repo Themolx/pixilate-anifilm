@@ -6,8 +6,9 @@ import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { getDeviceId } from '../lib/device'
 import { t } from '../lib/i18n'
+import { getTodayTopic, markTodayTopicSeen } from '../lib/daily'
 
-type Step = 'start' | 'name' | 'preview' | 'camera'
+type Step = 'start' | 'name' | 'preview' | 'topic' | 'camera'
 
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState<Step>('start')
@@ -17,12 +18,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewLoading, setPreviewLoading] = useState(true)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
-  const [previewDone, setPreviewDone] = useState(false)
-  const [previewPhase, setPreviewPhase] = useState<'intro' | 'playing'>('intro')
   const animationIntervalRef = useRef<number | null>(null)
   const imagePreloadRef = useRef<Map<string, HTMLImageElement>>(new Map())
 
   const deviceId = getDeviceId()
+  const [topic] = useState(() => getTodayTopic())
 
   // Fetch preview frames immediately on mount
   useEffect(() => {
@@ -39,15 +39,10 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         const thumbUrls = frames.reverse().slice(0, 12).map(f => framePublicUrl(f.thumb_path))
         setPreviewFrames(thumbUrls)
 
-        // Preload all images to avoid black flicker
         for (const url of thumbUrls) {
           const img = new Image()
-          img.onload = () => {
-            imagePreloadRef.current.set(url, img)
-          }
-          img.onerror = () => {
-            logger.log('warn', 'SYSTEM', `Failed to preload ${url}`)
-          }
+          img.onload = () => { imagePreloadRef.current.set(url, img) }
+          img.onerror = () => { logger.log('warn', 'SYSTEM', `Failed to preload ${url}`) }
           img.src = url
         }
 
@@ -63,25 +58,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })()
   }, [])
 
-  // 2s anticipation screen before the animation plays.
+  // Animation loop for preview — play once at 6fps, then stop at last frame.
+  // User taps to advance; no time-based navigation.
   useEffect(() => {
     if (step !== 'preview') return
-    if (previewPhase !== 'intro') return
-    const timer = window.setTimeout(() => setPreviewPhase('playing'), 2000)
-    return () => clearTimeout(timer)
-  }, [step, previewPhase])
-
-  // Animation loop for preview — play once at 6fps. When done, the effect
-  // below navigates to the camera step.
-  useEffect(() => {
-    if (step !== 'preview') return
-    if (previewPhase !== 'playing') return
-    if (previewDone) return
-
-    if (previewFrames.length === 0) {
-      setPreviewDone(true)
-      return
-    }
+    if (previewFrames.length === 0) return
 
     const timeouts: number[] = []
     let cancelled = false
@@ -99,12 +80,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     const startAnimation = () => {
       if (cancelled) return
       let frameIdx = 0
+      setCurrentFrameIndex(0)
       animationIntervalRef.current = window.setInterval(() => {
         frameIdx++
         setCurrentFrameIndex(frameIdx)
         if (frameIdx >= previewFrames.length - 1) {
           if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-          setPreviewDone(true)
+          animationIntervalRef.current = null
         }
       }, 1000 / 6)
     }
@@ -117,20 +99,17 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       animationIntervalRef.current = null
       timeouts.forEach(clearTimeout)
     }
-  }, [step, previewFrames, previewDone, previewPhase])
+  }, [step, previewFrames])
 
-  // Navigate to camera once the preview finishes (or is skipped).
-  useEffect(() => {
-    if (step !== 'preview') return
-    if (!previewDone) return
-    setStep('camera')
-  }, [step, previewDone])
-
-  const skipPreview = () => {
+  const advanceFromPreview = () => {
     if (step !== 'preview') return
     if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
     animationIntervalRef.current = null
-    setPreviewDone(true)
+    setStep('topic')
+  }
+
+  const advanceFromTopic = () => {
+    markTodayTopicSeen()
     setStep('camera')
   }
 
@@ -212,57 +191,50 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
-            onClick={skipPreview}
+            onClick={advanceFromPreview}
             style={{ cursor: 'pointer' }}
           >
+            <h2>{t('latestAnimation')}</h2>
+            <p className="onboard-body">{t('latestAnimationSub')}</p>
             {previewLoading ? (
-              <>
-                <h2>{t('liveAnimation')}</h2>
-                <p className="onboard-body">{t('loadingPreview')}</p>
-              </>
+              <p className="onboard-body">{t('loadingPreview')}</p>
             ) : previewError ? (
-              <>
-                <h2>{t('liveAnimation')}</h2>
-                <p className="onboard-body">{t('previewFailed')} {previewError}</p>
-              </>
+              <p className="onboard-body">{t('previewFailed')} {previewError}</p>
             ) : previewFrames.length === 0 ? null : (
-              <AnimatePresence mode="wait">
-                {previewPhase === 'intro' ? (
-                  <motion.div
-                    key="intro"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <h2>{t('latestAnimation')}</h2>
-                    <p className="onboard-body">{t('latestAnimationSub')}</p>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="playing"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <div className="onboarding-animation" style={{ position: 'relative' }}>
-                      <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
-                      {currentFrameIndex > 0 && (
-                        <motion.img
-                          src={previewFrames[currentFrameIndex - 1]}
-                          alt=""
-                          initial={{ opacity: 1 }}
-                          animate={{ opacity: 0 }}
-                          transition={{ duration: 0.08 }}
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
+              <div className="onboarding-animation" style={{ position: 'relative' }}>
+                <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                {currentFrameIndex > 0 && (
+                  <motion.img
+                    src={previewFrames[currentFrameIndex - 1]}
+                    alt=""
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 0.08 }}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                  />
                 )}
-              </AnimatePresence>
+              </div>
             )}
+            <button className="primary" onClick={(e) => { e.stopPropagation(); advanceFromPreview() }}>{t('continue')}</button>
+          </motion.div>
+        )}
+
+        {step === 'topic' && (
+          <motion.div
+            key="topic"
+            className="onboard-step"
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+          >
+            <div style={{ color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2 }}>
+              {t('dailyTopicIntro')}
+            </div>
+            <h2 style={{ fontSize: 36, lineHeight: 1.1 }}>{topic}</h2>
+            <p className="onboard-body">{t('dailyTopicHint')}</p>
+            <button className="primary" onClick={advanceFromTopic}>{t('dailyTopicGotIt')}</button>
           </motion.div>
         )}
 

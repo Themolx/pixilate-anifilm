@@ -37,6 +37,8 @@ export function CameraView() {
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
+  const [onionDepth, setOnionDepth] = useState(1)
+  const [showGrid, setShowGrid] = useState(false)
   const [topic] = useState(() => getTodayTopic())
   const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
 
@@ -165,7 +167,8 @@ export function CameraView() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     if (frames.length === 0) return
-    const lastFrame = frames[frames.length - 1]
+    const depthIdx = Math.max(0, frames.length - onionDepth)
+    const lastFrame = frames[depthIdx]
     if (!lastFrame) return
 
     // Prefer local blob for our own capture — avoids the upload race on slow networks.
@@ -215,7 +218,7 @@ export function CameraView() {
       cancelled = true
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [frames, onionOpacity, localCapture])
+  }, [frames, onionOpacity, localCapture, onionDepth])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
@@ -282,7 +285,7 @@ export function CameraView() {
     logger.log('info', 'CAPTURE', 'Starting capture')
 
     try {
-      const cap = await captureFrame(v)
+      const cap = await captureFrame(v, zoom)
       logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
 
       try {
@@ -381,7 +384,21 @@ export function CameraView() {
       <div className="viewport-wrap">
       <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
-        <canvas ref={canvasRef} className="onion-layer" style={{ transform: `scale(${zoom})` }} />
+        <canvas ref={canvasRef} className="onion-layer" />
+
+        {showGrid && (
+          <svg
+            className="grid-overlay"
+            viewBox="0 0 3 3"
+            preserveAspectRatio="none"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+          >
+            <line x1="1" y1="0" x2="1" y2="3" stroke="rgba(255,255,255,0.45)" strokeWidth="0.01" />
+            <line x1="2" y1="0" x2="2" y2="3" stroke="rgba(255,255,255,0.45)" strokeWidth="0.01" />
+            <line x1="0" y1="1" x2="3" y2="1" stroke="rgba(255,255,255,0.45)" strokeWidth="0.01" />
+            <line x1="0" y1="2" x2="3" y2="2" stroke="rgba(255,255,255,0.45)" strokeWidth="0.01" />
+          </svg>
+        )}
 
         {/* Daily topic pill (tap to re-open the modal) */}
         <button
@@ -452,14 +469,45 @@ export function CameraView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="onion-icon">◐</div>
-        <input
-          type="range"
-          min={0}
-          max={80}
-          value={Math.round(onionOpacity * 100)}
-          onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
-        />
+        <div className="onion-row">
+          <div className="onion-icon" title="Onion skin opacity">◐</div>
+          <input
+            type="range"
+            min={0}
+            max={80}
+            value={Math.round(onionOpacity * 100)}
+            onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
+            aria-label="Onion opacity"
+          />
+          <button
+            className={`grid-toggle ${showGrid ? 'on' : ''}`}
+            onClick={() => setShowGrid(g => !g)}
+            title="Toggle 3×3 grid"
+            aria-label="Toggle grid"
+            aria-pressed={showGrid}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="1.5" y="1.5" width="13" height="13" />
+              <line x1="6" y1="1.5" x2="6" y2="14.5" />
+              <line x1="10" y1="1.5" x2="10" y2="14.5" />
+              <line x1="1.5" y1="6" x2="14.5" y2="6" />
+              <line x1="1.5" y1="10" x2="14.5" y2="10" />
+            </svg>
+          </button>
+        </div>
+        <div className="onion-row">
+          <div className="onion-icon small" title="Onion depth">⧉</div>
+          <input
+            type="range"
+            min={1}
+            max={Math.max(1, Math.min(5, frames.length || 1))}
+            value={onionDepth}
+            onChange={e => setOnionDepth(Number(e.target.value))}
+            aria-label="Onion depth (frames back)"
+            disabled={frames.length < 2}
+          />
+          <span className="onion-depth-value">{onionDepth}</span>
+        </div>
       </motion.div>
 
       <div className="controls">
@@ -472,10 +520,11 @@ export function CameraView() {
             aria-label="Rewind 2s"
           >
             <span className="rewind-label">2s</span>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              {/* Rewind icon: two left-pointing triangles */}
-              <polygon points="10,3 10,17 2,10" />
-              <polygon points="18,3 18,17 10,10" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              {/* Rewind-to-start icon: vertical bar + two left-pointing triangles */}
+              <rect x="4" y="6" width="2" height="12" rx="0.5" />
+              <polygon points="14,6 14,18 7,12" />
+              <polygon points="22,6 22,18 15,12" />
             </svg>
           </button>
         </div>

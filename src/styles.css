@@ -232,20 +232,19 @@ input, select { font-family: inherit; }
 }
 
 .viewport-wrap {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   background: #000;
   overflow: hidden;
 }
 
 .viewport {
-  aspect-ratio: 1 / 1;
   width: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  height: 100%;
   position: relative;
   overflow: hidden;
   background: #000;
@@ -283,12 +282,59 @@ input, select { font-family: inherit; }
 /* ---------- onion control bar (above main controls, white UI) ---------- */
 .onion-control-bar {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 16px 4px;
+  background: var(--bg);
+  margin-top: auto;
+}
+
+.onion-row {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 10px 16px 6px;
-  background: var(--bg);
-  max-width: 100%;
+}
+
+.onion-row input[type=range] {
+  flex: 1;
+  max-width: 220px;
+}
+
+.onion-depth-value {
+  min-width: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: 'Courier New', monospace;
+  text-align: center;
+}
+
+.onion-icon.small {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.grid-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 150ms ease;
+}
+
+.grid-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 @keyframes slideUp {
