@@ -30,14 +30,21 @@ function drawScaled(source: CanvasImageSource, sw: number, sh: number, targetW: 
 
   // Enforce 9:16 aspect ratio (portrait)
   const targetRatio = 9 / 16
-  const currentRatio = w / h
-  if (currentRatio > targetRatio) {
-    // Too wide, constrain width
-    w = Math.round(h * targetRatio)
-  } else if (currentRatio < targetRatio) {
-    // Too tall, constrain height
-    h = Math.round(w / targetRatio)
+  const sourceRatio = sw / sh
+
+  let cropW = sw
+  let cropH = sh
+
+  if (sourceRatio > targetRatio) {
+    // Source is too wide, crop width
+    cropW = sh * targetRatio
+  } else if (sourceRatio < targetRatio) {
+    // Source is too tall, crop height
+    cropH = sw / targetRatio
   }
+
+  const sx = (sw - cropW) / 2
+  const sy = (sh - cropH) / 2
 
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -46,10 +53,8 @@ function drawScaled(source: CanvasImageSource, sw: number, sh: number, targetW: 
   if (!ctx) throw new Error('2d context unavailable')
   ctx.imageSmoothingQuality = 'high'
 
-  // Center crop from source
-  const sx = (sw - (sw * w / w)) / 2
-  const sy = (sh - (sh * h / h)) / 2
-  ctx.drawImage(source, sx, sy, Math.round(sw * w / w), Math.round(sh * h / h), 0, 0, w, h)
+  // Draw center-cropped source
+  ctx.drawImage(source, sx, sy, cropW, cropH, 0, 0, w, h)
   return canvas
 }
 
