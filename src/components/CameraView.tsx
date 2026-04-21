@@ -207,16 +207,17 @@ export function CameraView() {
       showStatusMessage('Checking…', 'info')
       try {
         const verdict = await classifyBlob(cap.thumb)
+        logger.log('info', 'MODERATION', `Scores: ${JSON.stringify(verdict.scores)}`)
         if (!verdict.safe) {
           const filterMsg = verdict.reason ?? 'Content blocked'
           logger.log('warn', 'MODERATION', `BLOCKED: ${filterMsg}`)
           throw new Error(`moderation:${filterMsg}`)
         }
-        logger.log('info', 'MODERATION', 'Frame passed (safe)')
+        logger.log('info', 'MODERATION', 'PASSED (safe content)')
       } catch (e) {
         const m = e instanceof Error ? e.message : String(e)
         if (m.startsWith('moderation:')) throw e
-        logger.log('warn', 'MODERATION', `Classify failed, allowing upload: ${m}`)
+        logger.log('error', 'MODERATION', `Classify error: ${m}`)
       }
 
       const { id, fullPath, thumbPath } = buildFramePaths()
@@ -302,8 +303,9 @@ export function CameraView() {
             onClick={handlePreviewOpen}
             disabled={frames.length === 0}
             title="Preview last 2 seconds"
+            aria-label="Preview"
           >
-            ⏯
+            PLAY
           </button>
         </div>
 
