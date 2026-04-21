@@ -144,27 +144,27 @@ export function CameraView() {
     canvas.width = canvas.offsetWidth * window.devicePixelRatio
     canvas.height = canvas.offsetHeight * window.devicePixelRatio
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    if (frames.length === 0) return
+    if (frames.length === 0 || onionOpacity === 0) return
 
-    const lastFrame = frames.slice(-1)
+    const lastFrame = frames[frames.length - 1]
+    if (!lastFrame) return
+
     let cancelled = false
     ;(async () => {
-      const canvases = await Promise.all(lastFrame.map(f => getTinted(f.storage_path, tintCacheRef.current)))
-      if (cancelled) return
-      canvases.forEach((off) => {
-        if (!off) return
-        ctx.globalAlpha = onionOpacity
-        const scale = Math.max(canvas.width / off.width, canvas.height / off.height)
-        const w = off.width * scale
-        const h = off.height * scale
-        ctx.drawImage(off, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
-      })
+      const tinted = await getTinted(lastFrame.storage_path, tintCacheRef.current)
+      if (cancelled || !tinted) return
+
+      ctx.globalAlpha = onionOpacity
+      const scale = Math.max(canvas.width / tinted.width, canvas.height / tinted.height)
+      const w = tinted.width * scale
+      const h = tinted.height * scale
+      ctx.drawImage(tinted, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
       ctx.globalAlpha = 1
     })()
     return () => {
       cancelled = true
     }
-  }, [frames, onionOpacity])
+  }, [frames, onionOpacity, tintCacheRef])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
