@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { listFrames, subscribeFrames } from '../lib/db'
 import { framePublicUrl } from '../lib/supabase'
 import type { Frame } from '../lib/types'
 import { Timeline } from './Timeline'
+import { logger } from '../lib/logger'
 
 const FPS_OPTIONS = [6, 8, 12, 24] as const
 
@@ -63,32 +65,68 @@ export function PlaybackView() {
   if (loading) return <div className="loading">Loading…</div>
   if (frames.length === 0) {
     return (
-      <div className="session-picker">
+      <motion.div
+        className="session-picker"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         <h1>No frames yet</h1>
         <button className="primary" onClick={() => navigate('/')}>Back to camera</button>
-      </div>
+      </motion.div>
     )
   }
 
   const current = frames[Math.min(idx, frames.length - 1)]
 
+  const handlePlayPause = () => {
+    if (playing) {
+      setPlaying(false)
+      logger.log('info', 'SYSTEM', 'Playback paused')
+    } else {
+      setIdx(0)
+      setPlaying(true)
+      logger.log('info', 'SYSTEM', 'Playback started')
+    }
+  }
+
   return (
-    <div className="playback-overlay">
-      <img src={framePublicUrl(current.storage_path)} alt={`Frame ${idx + 1}`} />
+    <motion.div
+      className="playback-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.img
+        key={current.id}
+        src={framePublicUrl(current.storage_path)}
+        alt={`Frame ${idx + 1}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.1 }}
+      />
       <div className="playback-controls">
-        <button onClick={() => { if (playing) setPlaying(false); else { setIdx(0); setPlaying(true) } }}>
+        <button onClick={handlePlayPause}>
           {playing ? '⏸ Pause' : '▶ Play'}
         </button>
         <span>{idx + 1} / {frames.length}</span>
         <label className="fps-select">
           FPS
-          <select value={fps} onChange={e => setFps(Number(e.target.value))}>
+          <select
+            value={fps}
+            onChange={e => {
+              const newFps = Number(e.target.value)
+              setFps(newFps)
+              logger.log('info', 'SYSTEM', `FPS changed to ${newFps}`)
+            }}
+          >
             {FPS_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </label>
         <button onClick={() => navigate('/')}>✕ Close</button>
       </div>
       <Timeline frames={frames} currentIndex={idx} onSelect={i => { setPlaying(false); setIdx(i) }} />
-    </div>
+    </motion.div>
   )
 }

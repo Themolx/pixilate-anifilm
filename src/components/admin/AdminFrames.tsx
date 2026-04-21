@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import JSZip from 'jszip'
 import {
   adminListFrames,
   restoreFrames,
   softDeleteFrames,
 } from '../../lib/db'
 import { framePublicUrl } from '../../lib/supabase'
+import { logger } from '../../lib/logger'
 import type { Frame } from '../../lib/types'
 
 export function AdminFrames() {
@@ -61,6 +63,63 @@ export function AdminFrames() {
   }
 
   const activeCount = frames.filter(f => !f.deleted_at).length
+  const [downloadingCount, setDownloadingCount] = useState(0)
+  const [downloadTotal, setDownloadTotal] = useState(0)
+
+  async function downloadAllFrames() {
+    const toDownload = frames.filter(f => !f.deleted_at)
+    if (toDownload.length === 0) {
+      alert('No active frames to download')
+      return
+    }
+    if (!confirm(`Download ${toDownload.length} frame(s) as ZIP?`)) return
+
+    logger.log('info', 'SYSTEM', `Starting download of ${toDownload.length} frames`)
+    setDownloadingCount(0)
+    setDownloadTotal(toDownload.length)
+
+    const zip = new JSZip()
+    let count = 0
+
+    for (const frame of toDownload) {
+      try {
+        const url = framePublicUrl(frame.storage_path)
+        const resp = await fetch(url)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const blob = await resp.blob()
+
+        const filename = `frame-${String(frame.seq).padStart(5, '0')}.jpg`
+        zip.file(filename, blob)
+
+        count++
+        setDownloadingCount(count)
+        logger.log('info', 'SYSTEM', `Downloaded frame ${count}/${toDownload.length}`)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.log('error', 'ERROR', `Failed to download frame ${frame.seq}: ${msg}`)
+      }
+    }
+
+    try {
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pixilate-frames-${new Date().toISOString().slice(0, 10)}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      logger.log('info', 'SYSTEM', `Downloaded ${count} frames as ZIP`)
+      setDownloadingCount(0)
+      setDownloadTotal(0)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Failed to create ZIP: ${msg}`)
+      logger.log('error', 'ERROR', `ZIP creation failed: ${msg}`)
+    }
+  }
 
   return (
     <div>
@@ -76,6 +135,13 @@ export function AdminFrames() {
           Include deleted
         </label>
         <button className="ghost" onClick={refresh}>Refresh</button>
+        <button
+          className="ghost"
+          onClick={downloadAllFrames}
+          disabled={activeCount === 0 || downloadTotal > 0}
+        >
+          {downloadTotal > 0 ? `Downloading ${downloadingCount}/${downloadTotal}` : 'Download all'}
+        </button>
       </div>
 
       <div className="admin-bulk">

@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { Frame } from '../lib/types'
-import {
-  buildFramePaths,
-  insertFrameRow,
-  listFrames,
-  subscribeFrames,
-  uploadFrameBlobs,
-} from '../lib/db'
+import { buildFramePaths, insertFrameRow, listFrames, subscribeFrames, uploadFrameBlobs } from '../lib/db'
 import { captureFrame } from '../lib/capture'
 import { classifyBlob, loadModel } from '../lib/moderation'
 import { framePublicUrl } from '../lib/supabase'
 import { getDisplayName } from '../lib/onboarding'
-import { Timeline } from './Timeline'
+import { logger } from '../lib/logger'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
+const PREVIEW_FPS = 12
 
 export function CameraView() {
-  const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -29,8 +23,13 @@ export function CameraView() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [statusType, setStatusType] = useState<'info' | 'error' | 'success'>('info')
   const [onionOpacity, setOnionOpacity] = useState(0.3)
   const [flash, setFlash] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewFrames, setPreviewFrames] = useState<string[]>([])
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const previewIntervalRef = useRef<number | null>(null)
 
   const startCamera = useCallback(async () => {
     setCameraError(null)
@@ -47,8 +46,11 @@ export function CameraView() {
         v.srcObject = stream
         v.onloadeddata = () => setCameraReady(true)
       }
+      logger.log('info', 'SYSTEM', 'Camera started')
     } catch (err) {
-      setCameraError(err instanceof Error ? err.message : 'Camera error')
+      const msg = err instanceof Error ? err.message : 'Camera error'
+      setCameraError(msg)
+      logger.log('error', 'ERROR', `Camera start failed: ${msg}`)
     }
   }, [])
 
@@ -60,11 +62,10 @@ export function CameraView() {
     }
   }, [startCamera])
 
-  // Warm up the NSFW model so the first capture doesn't wait for a cold download.
+  // Warm up NSFW model
   useEffect(() => {
     loadModel().catch(err => {
-      // eslint-disable-next-line no-console
-      console.warn('[moderation] model preload failed', err)
+      logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
   }, [])
 
@@ -73,14 +74,15 @@ export function CameraView() {
       const rows = await listFrames()
       setFrames(rows)
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[refresh]', err)
+      logger.log('error', 'ERROR', `Refresh failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }, [])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => {
+    refresh()
+  }, [refresh])
 
-  // Realtime + polling fallback (captive portals block WebSockets).
+  // Realtime + polling fallback
   useEffect(() => {
     let gotEvent = false
     let fallbackTimer: number | null = null
@@ -88,19 +90,21 @@ export function CameraView() {
 
     const unsubscribe = subscribeFrames(ev => {
       gotEvent = true
+      logger.log('info', 'REALTIME', `Frame ${ev.type}: ${ev.frame.id}`)
       setFrames(prev => {
         if (ev.type === 'INSERT') {
           if (prev.some(f => f.id === ev.frame.id)) return prev
           return [...prev, ev.frame].sort((a, b) => a.seq - b.seq)
         }
-        return prev
-          .map(f => (f.id === ev.frame.id ? ev.frame : f))
-          .filter(f => !f.deleted_at)
+        return prev.map(f => (f.id === ev.frame.id ? ev.frame : f)).filter(f => !f.deleted_at)
       })
     })
 
     fallbackTimer = window.setTimeout(() => {
-      if (!gotEvent) pollTimer = window.setInterval(refresh, POLL_INTERVAL_MS)
+      if (!gotEvent) {
+        logger.log('info', 'SYSTEM', 'Realtime timeout, falling back to polling')
+        pollTimer = window.setInterval(refresh, POLL_INTERVAL_MS)
+      }
     }, POLL_FALLBACK_MS)
 
     return () => {
@@ -110,14 +114,14 @@ export function CameraView() {
     }
   }, [refresh])
 
-  // Onion skin: last 3 frames tinted green, stacked
+  // Onion skin
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    canvas.width  = canvas.offsetWidth  * window.devicePixelRatio
+    canvas.width = canvas.offsetWidth * window.devicePixelRatio
     canvas.height = canvas.offsetHeight * window.devicePixelRatio
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (frames.length === 0) return
@@ -138,35 +142,68 @@ export function CameraView() {
       })
       ctx.globalAlpha = 1
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [frames, onionOpacity])
+
+  function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
+    setStatus(msg)
+    setStatusType(type)
+    setTimeout(() => setStatus(null), 2000)
+  }
+
+  function handlePreviewOpen() {
+    if (frames.length < 1) return
+    const thumbs = frames.slice(-24).map(f => framePublicUrl(f.thumb_path))
+    setPreviewFrames(thumbs)
+    setPreviewIndex(0)
+    setShowPreview(true)
+
+    previewIntervalRef.current = window.setInterval(() => {
+      setPreviewIndex(prev => (prev + 1) % thumbs.length)
+    }, 1000 / PREVIEW_FPS)
+
+    logger.log('info', 'SYSTEM', 'Preview opened')
+  }
+
+  function handlePreviewClose() {
+    setShowPreview(false)
+    if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
+  }
 
   async function doCapture() {
     const v = videoRef.current
     if (!v || capturing) return
     if (!cameraReady || !v.videoWidth) {
-      setStatus('Camera not ready')
-      setTimeout(() => setStatus(null), 1500)
+      showStatusMessage('Camera not ready', 'error')
       return
     }
+
     setCapturing(true)
-    setStatus('Capturing…')
+    showStatusMessage('Capturing…', 'info')
+    logger.log('info', 'CAPTURE', 'Starting capture')
+
     try {
       const cap = await captureFrame(v)
+      logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}`)
 
-      setStatus('Checking…')
+      showStatusMessage('Checking…', 'info')
       try {
         const verdict = await classifyBlob(cap.thumb)
-        if (!verdict.safe) throw new Error(`moderation:${verdict.reason ?? 'Content blocked'}`)
+        if (!verdict.safe) {
+          logger.log('warn', 'MODERATION', `Blocked: ${verdict.reason}`)
+          throw new Error(`moderation:${verdict.reason ?? 'Content blocked'}`)
+        }
+        logger.log('info', 'MODERATION', 'Frame passed moderation')
       } catch (e) {
         const m = e instanceof Error ? e.message : String(e)
         if (m.startsWith('moderation:')) throw e
-        // eslint-disable-next-line no-console
-        console.warn('[moderation] classify failed, allowing upload', e)
+        logger.log('warn', 'MODERATION', `Classify failed, allowing upload: ${m}`)
       }
 
       const { id, fullPath, thumbPath } = buildFramePaths()
-      // Row first: DB triggers enforce cap + rate. If this fails, no orphan blob.
+      logger.log('info', 'UPLOAD', `Inserting frame row: ${id}`)
       await insertFrameRow({
         id,
         capture: { width: cap.width, height: cap.height, bytes: cap.full.size },
@@ -174,19 +211,31 @@ export function CameraView() {
         thumbPath,
         displayName: getDisplayName(),
       })
+
       setFlash(true)
       setTimeout(() => setFlash(false), 140)
+
+      logger.log('info', 'UPLOAD', `Uploading blobs for ${id}`)
       await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
-      setStatus('Saved')
+
+      logger.log('info', 'CAPTURE', 'Capture complete')
+      showStatusMessage('Saved', 'success')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg.startsWith('moderation:'))      setStatus(msg.slice('moderation:'.length))
-      else if (msg.includes('rate_limit'))    setStatus('Slow down! (12 frames/min max)')
-      else if (msg.includes('frame_cap_reached')) setStatus('Festival frame cap reached')
-      else                                    setStatus(`Error: ${msg}`)
+      logger.log('error', 'ERROR', `Capture failed: ${msg}`)
+
+      if (msg.startsWith('moderation:')) {
+        showStatusMessage(msg.slice('moderation:'.length), 'error')
+      } else if (msg.includes('rate_limit')) {
+        showStatusMessage('Slow down! (12 frames/min max)', 'error')
+        logger.log('warn', 'RATE_LIMIT', 'Rate limit hit')
+      } else if (msg.includes('frame_cap_reached')) {
+        showStatusMessage('Festival frame cap reached', 'error')
+      } else {
+        showStatusMessage(`Error: ${msg}`, 'error')
+      }
     } finally {
       setCapturing(false)
-      setTimeout(() => setStatus(null), 2000)
     }
   }
 
@@ -196,48 +245,104 @@ export function CameraView() {
         <video ref={videoRef} autoPlay playsInline muted />
         <canvas ref={canvasRef} className="onion-layer" />
         {flash && <div className="capture-flash" />}
-
-        <div className="frame-count">
-          {frames.length} frames · Anifilm 2026
-          {status && <div className="frame-count-status">{status}</div>}
-          {!cameraReady && !cameraError && <div className="frame-count-hint">Starting camera…</div>}
-          {cameraError && (
-            <div className="frame-count-error">
-              {cameraError}{' '}
-              <button className="inline-btn" onClick={startCamera}>Retry</button>
-            </div>
-          )}
-        </div>
-
-        <div className="onion-control">
-          <span>Onion {Math.round(onionOpacity * 100)}%</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={onionOpacity * 100}
-            onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
-          />
-        </div>
       </div>
 
+      <motion.div
+        className="onion-control-bar"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="onion-icon">◐</div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={onionOpacity * 100}
+          onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
+        />
+      </motion.div>
+
       <div className="controls">
-        <button className="side-btn" onClick={() => navigate('/admin')} title="Admin">⚙</button>
+        <div className="controls-group">
+          <button
+            className="preview-btn"
+            onClick={handlePreviewOpen}
+            disabled={frames.length === 0}
+            title="Preview last 2 seconds"
+          >
+            ▶
+          </button>
+        </div>
+
         <button
           className="capture-btn"
           onClick={doCapture}
-          disabled={capturing}
-          title="Capture"
+          disabled={capturing || !cameraReady}
+          title="Capture frame"
         />
-        <button
-          className="side-btn"
-          onClick={() => navigate('/play')}
-          disabled={frames.length === 0}
-          title="Play"
-        >▶</button>
+
+        <div className="frame-count">{String(frames.length).padStart(3, '0')}</div>
       </div>
 
-      <Timeline frames={frames} />
+      <AnimatePresence>
+        {status && (
+          <motion.div
+            className={`status-toast ${statusType}`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {status}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPreview && previewFrames.length > 0 && (
+          <motion.div
+            className="preview-overlay"
+            onClick={handlePreviewClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.img
+              key={previewIndex}
+              src={previewFrames[previewIndex]}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.05 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {cameraError && (
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            maxWidth: 'calc(100% - 24px)',
+          }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="onboard-error">
+            <strong>Camera error: {cameraError}</strong>
+            <p className="onboard-hint">
+              iOS: Settings → Safari → Camera → Allow. Desktop: click the camera icon in the address bar.
+            </p>
+            <button className="primary" onClick={startCamera} style={{ marginTop: '8px', maxWidth: 'none' }}>
+              Retry
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }
