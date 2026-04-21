@@ -164,7 +164,7 @@ export function CameraView() {
     return () => {
       cancelled = true
     }
-  }, [frames, onionOpacity, tintCacheRef])
+  }, [frames, onionOpacity])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
