@@ -146,15 +146,14 @@ export function CameraView() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (frames.length === 0) return
 
-    const lastThree = frames.slice(-3)
+    const lastFrame = frames.slice(-1)
     let cancelled = false
     ;(async () => {
-      const canvases = await Promise.all(lastThree.map(f => getTinted(f.storage_path, tintCacheRef.current)))
+      const canvases = await Promise.all(lastFrame.map(f => getTinted(f.storage_path, tintCacheRef.current)))
       if (cancelled) return
-      canvases.forEach((off, i) => {
+      canvases.forEach((off) => {
         if (!off) return
-        const layerOpacity = onionOpacity * ((i + 1) / lastThree.length)
-        ctx.globalAlpha = layerOpacity
+        ctx.globalAlpha = onionOpacity
         const scale = Math.max(canvas.width / off.width, canvas.height / off.height)
         const w = off.width * scale
         const h = off.height * scale
