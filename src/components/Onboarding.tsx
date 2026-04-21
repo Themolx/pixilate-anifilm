@@ -33,12 +33,18 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })()
   }, [])
 
-  // Animation loop for preview
+  // Animation loop for preview — play once, then auto-advance
   useEffect(() => {
     if (step !== 'preview' || previewFrames.length === 0) return
 
+    let frameIdx = 0
     animationIntervalRef.current = window.setInterval(() => {
-      setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
+      frameIdx++
+      setCurrentFrameIndex(frameIdx)
+      if (frameIdx >= previewFrames.length) {
+        if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
+        setTimeout(() => setStep('welcome'), 300)
+      }
     }, 1000 / 12)
 
     return () => {

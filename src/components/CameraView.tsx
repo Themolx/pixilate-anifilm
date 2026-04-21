@@ -29,6 +29,7 @@ export function CameraView() {
   const [showPreview, setShowPreview] = useState(false)
   const [previewFrames, setPreviewFrames] = useState<string[]>([])
   const [previewIndex, setPreviewIndex] = useState(0)
+  const [throttleMs, setThrottleMs] = useState(0)
   const previewIntervalRef = useRef<number | null>(null)
 
   const startCamera = useCallback(async () => {
@@ -114,6 +115,15 @@ export function CameraView() {
     }
   }, [refresh])
 
+  // Throttle cooldown timer
+  useEffect(() => {
+    if (throttleMs <= 0) return
+    const timer = setInterval(() => {
+      setThrottleMs(prev => Math.max(0, prev - 100))
+    }, 100)
+    return () => clearInterval(timer)
+  }, [throttleMs])
+
   // Onion skin
   useEffect(() => {
     const canvas = canvasRef.current
@@ -160,11 +170,17 @@ export function CameraView() {
     setPreviewIndex(0)
     setShowPreview(true)
 
-    previewIntervalRef.current = window.setInterval(() => {
-      setPreviewIndex(prev => (prev + 1) % thumbs.length)
-    }, 1000 / PREVIEW_FPS)
+    logger.log('info', 'SYSTEM', `Preview opened: ${thumbs.length} frames at 12fps`)
 
-    logger.log('info', 'SYSTEM', 'Preview opened')
+    let frameIdx = 0
+    previewIntervalRef.current = window.setInterval(() => {
+      frameIdx++
+      setPreviewIndex(frameIdx)
+      if (frameIdx >= thumbs.length - 1) {
+        if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
+        setTimeout(() => handlePreviewClose(), 500)
+      }
+    }, 1000 / PREVIEW_FPS)
   }
 
   function handlePreviewClose() {
@@ -174,7 +190,7 @@ export function CameraView() {
 
   async function doCapture() {
     const v = videoRef.current
-    if (!v || capturing) return
+    if (!v || capturing || throttleMs > 0) return
     if (!cameraReady || !v.videoWidth) {
       showStatusMessage('Camera not ready', 'error')
       return
@@ -186,16 +202,17 @@ export function CameraView() {
 
     try {
       const cap = await captureFrame(v)
-      logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}`)
+      logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
 
       showStatusMessage('Checking…', 'info')
       try {
         const verdict = await classifyBlob(cap.thumb)
         if (!verdict.safe) {
-          logger.log('warn', 'MODERATION', `Blocked: ${verdict.reason}`)
-          throw new Error(`moderation:${verdict.reason ?? 'Content blocked'}`)
+          const filterMsg = verdict.reason ?? 'Content blocked'
+          logger.log('warn', 'MODERATION', `BLOCKED: ${filterMsg}`)
+          throw new Error(`moderation:${filterMsg}`)
         }
-        logger.log('info', 'MODERATION', 'Frame passed moderation')
+        logger.log('info', 'MODERATION', 'Frame passed (safe)')
       } catch (e) {
         const m = e instanceof Error ? e.message : String(e)
         if (m.startsWith('moderation:')) throw e
@@ -203,7 +220,7 @@ export function CameraView() {
       }
 
       const { id, fullPath, thumbPath } = buildFramePaths()
-      logger.log('info', 'UPLOAD', `Inserting frame row: ${id}`)
+      logger.log('info', 'UPLOAD', `Inserting row: ${id}`)
       await insertFrameRow({
         id,
         capture: { width: cap.width, height: cap.height, bytes: cap.full.size },
@@ -215,20 +232,35 @@ export function CameraView() {
       setFlash(true)
       setTimeout(() => setFlash(false), 140)
 
-      logger.log('info', 'UPLOAD', `Uploading blobs for ${id}`)
+      logger.log('info', 'UPLOAD', `Uploading blobs…`)
       await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
 
-      logger.log('info', 'CAPTURE', 'Capture complete')
+      logger.log('info', 'CAPTURE', 'Success!')
       showStatusMessage('Saved', 'success')
+      setThrottleMs(1500)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      let msg = 'Unknown error'
+      try {
+        if (err instanceof Error) {
+          msg = err.message
+        } else if (typeof err === 'object' && err !== null && 'message' in err) {
+          msg = String((err as any).message)
+        } else if (typeof err === 'string') {
+          msg = err
+        } else {
+          msg = JSON.stringify(err)
+        }
+      } catch {
+        msg = 'Failed to format error'
+      }
+
       logger.log('error', 'ERROR', `Capture failed: ${msg}`)
 
       if (msg.startsWith('moderation:')) {
         showStatusMessage(msg.slice('moderation:'.length), 'error')
       } else if (msg.includes('rate_limit')) {
         showStatusMessage('Slow down! (12 frames/min max)', 'error')
-        logger.log('warn', 'RATE_LIMIT', 'Rate limit hit')
+        logger.log('warn', 'RATE_LIMIT', 'Rate limit triggered')
       } else if (msg.includes('frame_cap_reached')) {
         showStatusMessage('Festival frame cap reached', 'error')
       } else {
@@ -271,15 +303,15 @@ export function CameraView() {
             disabled={frames.length === 0}
             title="Preview last 2 seconds"
           >
-            ▶
+            ⏯
           </button>
         </div>
 
         <button
           className="capture-btn"
           onClick={doCapture}
-          disabled={capturing || !cameraReady}
-          title="Capture frame"
+          disabled={capturing || !cameraReady || throttleMs > 0}
+          title={throttleMs > 0 ? `Wait ${Math.ceil(throttleMs / 1000)}s` : 'Capture frame'}
         />
 
         <div className="frame-count">{String(frames.length).padStart(3, '0')}</div>
