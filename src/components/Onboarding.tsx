@@ -63,7 +63,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   // Animation loop for preview — play 3 times at 6fps, then auto-advance
   useEffect(() => {
-    if (step !== 'preview' || previewFrames.length === 0 || previewPlayCount >= 3) return
+    if (step !== 'preview') return
+
+    // Skip preview if no frames
+    if (previewFrames.length === 0) {
+      setTimeout(() => setStep('camera'), 500)
+      return
+    }
+
+    if (previewPlayCount >= 3) return
 
     // Wait for all images to be preloaded
     let loadedCount = 0
