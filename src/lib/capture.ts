@@ -22,28 +22,24 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   })
 }
 
-function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean, zoom: number) {
-  // Match what the user sees: CSS zoom shows a centered sw/zoom × sh/zoom window.
-  const zw = sw / zoom
-  const zh = sh / zoom
-  const zx = (sw - zw) / 2
-  const zy = (sh - zh) / 2
-
-  // Enforce 9:16 aspect ratio (portrait) on the visible window.
+function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean) {
+  // Always save full 9:16 frame. Zoom is display-only (like animation software):
+  // the stored file is immutable so live view and onion skin always reference
+  // the same underlying pixels.
   const targetRatio = 9 / 16
-  const sourceRatio = zw / zh
+  const sourceRatio = sw / sh
 
-  let cropW = zw
-  let cropH = zh
+  let cropW = sw
+  let cropH = sh
 
   if (sourceRatio > targetRatio) {
-    cropW = zh * targetRatio
+    cropW = sh * targetRatio
   } else if (sourceRatio < targetRatio) {
-    cropH = zw / targetRatio
+    cropH = sw / targetRatio
   }
 
-  const sx = zx + (zw - cropW) / 2
-  const sy = zy + (zh - cropH) / 2
+  const sx = (sw - cropW) / 2
+  const sy = (sh - cropH) / 2
 
   // Use full resolution for full image, scaled down for thumbnail only
   let w = Math.round(cropW)
@@ -67,13 +63,13 @@ function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbn
   return canvas
 }
 
-export async function captureFrame(video: HTMLVideoElement, zoom: number = 1): Promise<Capture> {
+export async function captureFrame(video: HTMLVideoElement): Promise<Capture> {
   const sw = video.videoWidth
   const sh = video.videoHeight
   if (!sw || !sh) throw new Error('video not ready')
 
-  const fullCanvas = drawCropped(video, sw, sh, false, zoom)
-  const thumbCanvas = drawCropped(video, sw, sh, true, zoom)
+  const fullCanvas = drawCropped(video, sw, sh, false)
+  const thumbCanvas = drawCropped(video, sw, sh, true)
 
   const [full, thumb] = await Promise.all([
     toBlob(fullCanvas, FULL_QUALITY),

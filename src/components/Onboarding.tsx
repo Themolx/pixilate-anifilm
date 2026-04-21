@@ -63,37 +63,40 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })()
   }, [])
 
-  // 4s anticipation screen before the animation actually plays.
+  // 2s anticipation screen before the animation plays.
   useEffect(() => {
     if (step !== 'preview') return
     if (previewPhase !== 'intro') return
-    const timer = window.setTimeout(() => setPreviewPhase('playing'), 4000)
+    const timer = window.setTimeout(() => setPreviewPhase('playing'), 2000)
     return () => clearTimeout(timer)
   }, [step, previewPhase])
 
-  // Animation loop for preview — play once at 6fps, then auto-advance
+  // Animation loop for preview — play once at 6fps, then auto-advance.
   useEffect(() => {
     if (step !== 'preview') return
     if (previewPhase !== 'playing') return
-
-    if (previewFrames.length === 0) {
-      setTimeout(() => setStep('camera'), 500)
-      return
-    }
-
     if (previewDone) return
 
-    let loadedCount = 0
+    if (previewFrames.length === 0) {
+      const t = window.setTimeout(() => setStep('camera'), 500)
+      return () => clearTimeout(t)
+    }
+
+    const timeouts: number[] = []
+    let cancelled = false
+
     const checkLoaded = () => {
-      loadedCount = 0
+      if (cancelled) return
+      let loaded = 0
       for (const url of previewFrames) {
-        if (imagePreloadRef.current.has(url)) loadedCount++
+        if (imagePreloadRef.current.has(url)) loaded++
       }
-      if (loadedCount === previewFrames.length) startAnimation()
-      else setTimeout(checkLoaded, 50)
+      if (loaded === previewFrames.length) startAnimation()
+      else timeouts.push(window.setTimeout(checkLoaded, 50))
     }
 
     const startAnimation = () => {
+      if (cancelled) return
       let frameIdx = 0
       animationIntervalRef.current = window.setInterval(() => {
         frameIdx++
@@ -101,7 +104,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         if (frameIdx >= previewFrames.length - 1) {
           if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
           setPreviewDone(true)
-          setTimeout(() => setStep('camera'), 500)
+          timeouts.push(window.setTimeout(() => setStep('camera'), 500))
         }
       }, 1000 / 6)
     }
@@ -109,9 +112,20 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     checkLoaded()
 
     return () => {
+      cancelled = true
       if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
+      animationIntervalRef.current = null
+      timeouts.forEach(clearTimeout)
     }
   }, [step, previewFrames, previewDone, previewPhase])
+
+  const skipPreview = () => {
+    if (step !== 'preview') return
+    if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
+    animationIntervalRef.current = null
+    setPreviewDone(true)
+    setStep('camera')
+  }
 
   async function requestCamera() {
     setCameraError(null)
@@ -191,6 +205,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
+            onClick={skipPreview}
+            style={{ cursor: 'pointer' }}
           >
             {previewLoading ? (
               <>

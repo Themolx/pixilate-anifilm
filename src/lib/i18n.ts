@@ -34,6 +34,10 @@ const dict = {
     cameraNotReady: 'Camera not ready',
     slowDown: 'Slow down! (12 frames/min max)',
     frameCapReached: 'Festival frame cap reached',
+    dailyTopicLabel: "Today's topic",
+    dailyTopicIntro: "Today's topic",
+    dailyTopicHint: 'Try to work this into your next frame.',
+    dailyTopicGotIt: 'Got it',
   },
   cs: {
     tagline: 'Kolektivní animace po políčkách.',
@@ -62,6 +66,10 @@ const dict = {
     cameraNotReady: 'Kamera není připravená',
     slowDown: 'Pomaleji! (max 12 políček/min)',
     frameCapReached: 'Limit festivalu vyčerpán',
+    dailyTopicLabel: 'Dnešní téma',
+    dailyTopicIntro: 'Dnešní téma',
+    dailyTopicHint: 'Zkus to dostat do dalšího políčka.',
+    dailyTopicGotIt: 'Beru',
   },
 } as const
 

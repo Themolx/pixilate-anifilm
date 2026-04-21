@@ -9,6 +9,7 @@ import { getDisplayName } from '../lib/onboarding'
 import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
 import { t } from '../lib/i18n'
+import { getTodayTopic, hasSeenTodayTopic, markTodayTopicSeen } from '../lib/daily'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
@@ -34,6 +35,8 @@ export function CameraView() {
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
+  const [topic] = useState(() => getTodayTopic())
+  const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
@@ -266,7 +269,7 @@ export function CameraView() {
     logger.log('info', 'CAPTURE', 'Starting capture')
 
     try {
-      const cap = await captureFrame(v, zoom)
+      const cap = await captureFrame(v)
       logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
 
       try {
@@ -364,7 +367,39 @@ export function CameraView() {
     <div className="app">
       <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
-        <canvas ref={canvasRef} className="onion-layer" />
+        <canvas ref={canvasRef} className="onion-layer" style={{ transform: `scale(${zoom})` }} />
+
+        {/* Daily topic pill (tap to re-open the modal) */}
+        <button
+          onClick={() => setShowTopicIntro(true)}
+          style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 6,
+            padding: '6px 10px',
+            borderRadius: 999,
+            background: 'rgba(0,0,0,0.4)',
+            border: 'none',
+            color: '#fff',
+            fontSize: 12,
+            lineHeight: 1,
+            cursor: 'pointer',
+            backdropFilter: 'blur(6px)',
+            maxWidth: 'calc(100% - 72px)',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          <span style={{ opacity: 0.7, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {t('dailyTopicLabel')}
+          </span>
+          <span style={{ fontWeight: 600 }}>{topic}</span>
+        </button>
 
         {/* Frame counter at top */}
         <div style={{
@@ -488,6 +523,49 @@ export function CameraView() {
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
               />
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTopicIntro && (
+          <motion.div
+            key="topic-intro"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => { markTodayTopicSeen(); setShowTopicIntro(false) }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 60,
+              background: 'rgba(0,0,0,0.82)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 32,
+              textAlign: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
+              {t('dailyTopicIntro')}
+            </div>
+            <div style={{ color: '#fff', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
+              {topic}
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 40, maxWidth: 320 }}>
+              {t('dailyTopicHint')}
+            </div>
+            <button
+              onClick={e => { e.stopPropagation(); markTodayTopicSeen(); setShowTopicIntro(false) }}
+              className="primary"
+              style={{ maxWidth: 200 }}
+            >
+              {t('dailyTopicGotIt')}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
