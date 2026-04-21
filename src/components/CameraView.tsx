@@ -37,6 +37,17 @@ export function CameraView() {
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
   const [topic] = useState(() => getTodayTopic())
   const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
+
+  const dismissTopic = useCallback(() => {
+    markTodayTopicSeen()
+    setShowTopicIntro(false)
+  }, [])
+
+  useEffect(() => {
+    if (!showTopicIntro) return
+    const timer = window.setTimeout(dismissTopic, 4000)
+    return () => clearTimeout(timer)
+  }, [showTopicIntro, dismissTopic])
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
@@ -365,6 +376,7 @@ export function CameraView() {
 
   return (
     <div className="app">
+      <div className="viewport-wrap">
       <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" style={{ transform: `scale(${zoom})` }} />
@@ -380,12 +392,12 @@ export function CameraView() {
             display: 'flex',
             alignItems: 'baseline',
             gap: 6,
-            padding: '6px 10px',
+            padding: '5px 9px',
             borderRadius: 999,
-            background: 'rgba(0,0,0,0.4)',
+            background: 'rgba(0,0,0,0.22)',
             border: 'none',
-            color: '#fff',
-            fontSize: 12,
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: 11,
             lineHeight: 1,
             cursor: 'pointer',
             backdropFilter: 'blur(6px)',
@@ -393,9 +405,10 @@ export function CameraView() {
             overflow: 'hidden',
             whiteSpace: 'nowrap',
             textOverflow: 'ellipsis',
+            opacity: 0.7,
           }}
         >
-          <span style={{ opacity: 0.7, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <span style={{ opacity: 0.65, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {t('dailyTopicLabel')}
           </span>
           <span style={{ fontWeight: 600 }}>{topic}</span>
@@ -418,6 +431,7 @@ export function CameraView() {
 
         {flash && <div className="capture-flash" />}
       </div>
+      </div>
 
       <motion.div
         className="onion-control-bar"
@@ -428,7 +442,7 @@ export function CameraView() {
         <div className="onion-icon">◐</div>
         <input
           type="range"
-          min={20}
+          min={0}
           max={80}
           value={Math.round(onionOpacity * 100)}
           onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
@@ -535,7 +549,7 @@ export function CameraView() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            onClick={() => { markTodayTopicSeen(); setShowTopicIntro(false) }}
+            onClick={dismissTopic}
             style={{
               position: 'fixed',
               inset: 0,
@@ -556,16 +570,9 @@ export function CameraView() {
             <div style={{ color: '#fff', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
               {topic}
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 40, maxWidth: 320 }}>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, maxWidth: 320 }}>
               {t('dailyTopicHint')}
             </div>
-            <button
-              onClick={e => { e.stopPropagation(); markTodayTopicSeen(); setShowTopicIntro(false) }}
-              className="primary"
-              style={{ maxWidth: 200 }}
-            >
-              {t('dailyTopicGotIt')}
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
