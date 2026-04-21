@@ -32,31 +32,37 @@ export function CameraView() {
   const [previewIndex, setPreviewIndex] = useState(0)
   const [throttleMs, setThrottleMs] = useState(0)
   const [zoom, setZoom] = useState(1)
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
-  const startCamera = useCallback(async () => {
+  const startCameraWithFacing = useCallback(async (facing: 'environment' | 'user') => {
     setCameraError(null)
     setCameraReady(false)
     try {
       streamRef.current?.getTracks().forEach(t => t.stop())
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+        video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 960 } },
         audio: false,
       })
       streamRef.current = stream
+      setFacingMode(facing)
       const v = videoRef.current
       if (v) {
         v.srcObject = stream
         v.onloadeddata = () => setCameraReady(true)
       }
-      logger.log('info', 'SYSTEM', 'Camera started')
+      logger.log('info', 'SYSTEM', `Camera started (${facing})`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Camera error'
       setCameraError(msg)
       logger.log('error', 'ERROR', `Camera start failed: ${msg}`)
     }
   }, [])
+
+  const startCamera = useCallback(() => {
+    startCameraWithFacing(facingMode)
+  }, [facingMode, startCameraWithFacing])
 
   useEffect(() => {
     startCamera()
@@ -209,6 +215,11 @@ export function CameraView() {
     if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
   }
 
+  const handleFlipCamera = useCallback(() => {
+    const newFacing = facingMode === 'environment' ? 'user' : 'environment'
+    startCameraWithFacing(newFacing)
+  }, [facingMode, startCameraWithFacing])
+
   async function doCapture() {
     const v = videoRef.current
     if (!v || capturing || throttleMs > 0) return
@@ -319,6 +330,21 @@ export function CameraView() {
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scaleX(-1) scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
 
+        {/* Frame counter at top */}
+        <div style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          fontSize: 14,
+          fontWeight: '600',
+          color: '#fff',
+          textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+          fontFamily: 'monospace',
+          zIndex: 10
+        }}>
+          {String(frames.length).padStart(3, '0')}
+        </div>
+
         {flash && <div className="capture-flash" />}
       </div>
 
@@ -384,7 +410,32 @@ export function CameraView() {
           title={throttleMs > 0 ? `Wait ${Math.ceil(throttleMs / 1000)}s` : 'Capture frame'}
         />
 
-        <div className="frame-count">{String(frames.length).padStart(3, '0')}</div>
+        <button
+          className="flip-btn"
+          onClick={handleFlipCamera}
+          title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
+          aria-label="Flip camera"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'transparent',
+            border: '2px solid var(--text)',
+            color: 'var(--text)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 150ms ease',
+            opacity: 0.6
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M1 4v6h6M23 20v-6h-6" />
+            <path d="M20.362 4.431A9 9 0 0 0 3.638 19.569" />
+            <path d="M3.638 4.431A9 9 0 0 1 20.362 19.569" />
+          </svg>
+        </button>
       </div>
 
       <AnimatePresence>
