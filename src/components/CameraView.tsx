@@ -144,7 +144,8 @@ export function CameraView() {
     canvas.width = canvas.offsetWidth * window.devicePixelRatio
     canvas.height = canvas.offsetHeight * window.devicePixelRatio
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    if (frames.length === 0 || onionOpacity === 0) return
+
+    if (frames.length === 0) return
 
     const lastFrame = frames[frames.length - 1]
     if (!lastFrame) return
@@ -154,7 +155,7 @@ export function CameraView() {
       const tinted = await getTinted(lastFrame.storage_path, tintCacheRef.current)
       if (cancelled || !tinted) return
 
-      ctx.globalAlpha = onionOpacity
+      ctx.globalAlpha = Math.max(0.1, onionOpacity)
       const scale = Math.max(canvas.width / tinted.width, canvas.height / tinted.height)
       const w = tinted.width * scale
       const h = tinted.height * scale
