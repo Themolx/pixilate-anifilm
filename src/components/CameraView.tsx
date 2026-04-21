@@ -80,11 +80,12 @@ export function CameraView() {
       logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
 
-    // Detect orientation changes
+    // Detect orientation changes (mobile only)
     const handleOrientationChange = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
       const isLand = window.innerHeight < window.innerWidth
-      setIsLandscape(isLand)
-      if (isLand) {
+      setIsLandscape(isMobile && isLand)
+      if (isMobile && isLand) {
         logger.log('info', 'SYSTEM', 'Landscape detected - please rotate to portrait')
       }
     }
@@ -454,10 +455,11 @@ export function CameraView() {
             justifyContent: 'center',
             transition: 'all 150ms ease',
             opacity: 0.6,
-            fontSize: 18
+            fontSize: 16,
+            fontWeight: '600'
           }}
         >
-          {facingMode === 'environment' ? '📷' : '🤳'}
+          {facingMode === 'environment' ? '⟲' : '⟳'}
         </button>
       </div>
 
