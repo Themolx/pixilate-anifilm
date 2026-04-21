@@ -37,7 +37,6 @@ export function CameraView() {
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
-  const [onionDepth, setOnionDepth] = useState(1)
   const [showGrid, setShowGrid] = useState(false)
   const [topic] = useState(() => getTodayTopic())
   const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
@@ -167,8 +166,7 @@ export function CameraView() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     if (frames.length === 0) return
-    const depthIdx = Math.max(0, frames.length - onionDepth)
-    const lastFrame = frames[depthIdx]
+    const lastFrame = frames[frames.length - 1]
     if (!lastFrame) return
 
     // Prefer local blob for our own capture — avoids the upload race on slow networks.
@@ -218,7 +216,7 @@ export function CameraView() {
       cancelled = true
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [frames, onionOpacity, localCapture, onionDepth])
+  }, [frames, onionOpacity, localCapture])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
@@ -495,23 +493,10 @@ export function CameraView() {
             </svg>
           </button>
         </div>
-        <div className="onion-row">
-          <div className="onion-icon small" title="Onion depth">⧉</div>
-          <input
-            type="range"
-            min={1}
-            max={Math.max(1, Math.min(5, frames.length || 1))}
-            value={onionDepth}
-            onChange={e => setOnionDepth(Number(e.target.value))}
-            aria-label="Onion depth (frames back)"
-            disabled={frames.length < 2}
-          />
-          <span className="onion-depth-value">{onionDepth}</span>
-        </div>
       </motion.div>
 
       <div className="controls">
-        <div className="controls-group">
+        <div className="controls-left">
           <button
             className="preview-btn"
             onClick={handlePreviewOpen}
@@ -521,7 +506,6 @@ export function CameraView() {
           >
             <span className="rewind-label">2s</span>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              {/* Rewind-to-start icon: vertical bar + two left-pointing triangles */}
               <rect x="4" y="6" width="2" height="12" rx="0.5" />
               <polygon points="14,6 14,18 7,12" />
               <polygon points="22,6 22,18 15,12" />
@@ -536,31 +520,21 @@ export function CameraView() {
           title={throttleMs > 0 ? `Wait ${Math.ceil(throttleMs / 1000)}s` : 'Capture frame'}
         />
 
-        <button
-          className="flip-btn"
-          onClick={handleFlipCamera}
-          title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
-          aria-label="Flip camera"
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: '50%',
-            background: 'var(--bg-raised)',
-            border: '1px solid var(--border)',
-            color: 'var(--text)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 150ms ease',
-            fontSize: 22,
-            fontWeight: '400',
-            lineHeight: 1,
-            padding: 0,
-          }}
-        >
-          ↻
-        </button>
+        <div className="controls-right">
+          <button
+            className="flip-btn"
+            onClick={handleFlipCamera}
+            title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
+            aria-label="Flip camera"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 0 1 15.3-6.36L21 8" />
+              <polyline points="21 3 21 8 16 8" />
+              <path d="M21 12a9 9 0 0 1-15.3 6.36L3 16" />
+              <polyline points="3 21 3 16 8 16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

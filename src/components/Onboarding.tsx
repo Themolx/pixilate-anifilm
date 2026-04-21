@@ -6,110 +6,93 @@ import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { getDeviceId } from '../lib/device'
 import { t } from '../lib/i18n'
-import { getTodayTopic, markTodayTopicSeen } from '../lib/daily'
 
-type Step = 'start' | 'name' | 'preview' | 'topic' | 'camera'
+type Step = 'start' | 'name' | 'preview' | 'camera'
+
+const PREVIEW_FPS = 6
+const PREVIEW_FRAMES = 24
 
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState<Step>('start')
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [name, setName] = useState(getDisplayName() === 'Anonymous' ? '' : getDisplayName())
   const [previewFrames, setPreviewFrames] = useState<string[]>([])
-  const [previewLoading, setPreviewLoading] = useState(true)
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
-  const animationIntervalRef = useRef<number | null>(null)
-  const imagePreloadRef = useRef<Map<string, HTMLImageElement>>(new Map())
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [previewReady, setPreviewReady] = useState(false)
+  const previewIntervalRef = useRef<number | null>(null)
 
   const deviceId = getDeviceId()
-  const [topic] = useState(() => getTodayTopic())
 
-  // Fetch preview frames immediately on mount
+  // Fetch + preload last N frames (same source as the main rewind button)
   useEffect(() => {
+    let alive = true
     ;(async () => {
-      setPreviewLoading(true)
-      setPreviewError(null)
       try {
-        const frames = await listFrames(12)
-        if (frames.length < 3) {
+        const rows = await listFrames(PREVIEW_FRAMES)
+        if (!alive) return
+        // listFrames returns newest-first; flip for chronological playback
+        const ordered = [...rows].reverse()
+        const urls = ordered.map(f => framePublicUrl(f.storage_path))
+
+        if (urls.length < 3) {
           setPreviewFrames([])
-          logger.log('info', 'SYSTEM', `Onboarding: only ${frames.length} frames available, skipping preview`)
+          setPreviewReady(true)
+          logger.log('info', 'SYSTEM', `Onboarding: only ${urls.length} frames, skipping preview`)
           return
         }
-        const thumbUrls = frames.reverse().slice(0, 12).map(f => framePublicUrl(f.thumb_path))
-        setPreviewFrames(thumbUrls)
 
-        for (const url of thumbUrls) {
-          const img = new Image()
-          img.onload = () => { imagePreloadRef.current.set(url, img) }
-          img.onerror = () => { logger.log('warn', 'SYSTEM', `Failed to preload ${url}`) }
-          img.src = url
-        }
-
-        logger.log('info', 'SYSTEM', `Onboarding: ${thumbUrls.length} preview frames loaded`)
+        await Promise.all(
+          urls.map(
+            url =>
+              new Promise<void>(resolve => {
+                const img = new Image()
+                img.onload = () => resolve()
+                img.onerror = () => resolve()
+                img.src = url
+              }),
+          ),
+        )
+        if (!alive) return
+        setPreviewFrames(urls)
+        setPreviewReady(true)
+        logger.log('info', 'SYSTEM', `Onboarding: ${urls.length} preview frames preloaded`)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        logger.log('error', 'ERROR', `Failed to fetch preview frames: ${msg}`)
-        setPreviewError(msg)
+        logger.log('error', 'ERROR', `Onboarding preview fetch failed: ${msg}`)
         setPreviewFrames([])
-      } finally {
-        setPreviewLoading(false)
+        setPreviewReady(true)
       }
     })()
+    return () => { alive = false }
   }, [])
 
-  // Animation loop for preview — play once at 6fps, then stop at last frame.
-  // User taps to advance; no time-based navigation.
+  // Play the preview exactly like the main rewind button: iterate once at 6fps.
   useEffect(() => {
     if (step !== 'preview') return
+    if (!previewReady) return
     if (previewFrames.length === 0) return
 
-    const timeouts: number[] = []
-    let cancelled = false
-
-    const checkLoaded = () => {
-      if (cancelled) return
-      let loaded = 0
-      for (const url of previewFrames) {
-        if (imagePreloadRef.current.has(url)) loaded++
+    let frameIdx = 0
+    setPreviewIndex(0)
+    previewIntervalRef.current = window.setInterval(() => {
+      frameIdx++
+      setPreviewIndex(frameIdx)
+      if (frameIdx >= previewFrames.length - 1) {
+        if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
+        previewIntervalRef.current = null
       }
-      if (loaded === previewFrames.length) startAnimation()
-      else timeouts.push(window.setTimeout(checkLoaded, 50))
-    }
-
-    const startAnimation = () => {
-      if (cancelled) return
-      let frameIdx = 0
-      setCurrentFrameIndex(0)
-      animationIntervalRef.current = window.setInterval(() => {
-        frameIdx++
-        setCurrentFrameIndex(frameIdx)
-        if (frameIdx >= previewFrames.length - 1) {
-          if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-          animationIntervalRef.current = null
-        }
-      }, 1000 / 6)
-    }
-
-    checkLoaded()
+    }, 1000 / PREVIEW_FPS)
 
     return () => {
-      cancelled = true
-      if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-      animationIntervalRef.current = null
-      timeouts.forEach(clearTimeout)
+      if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
+      previewIntervalRef.current = null
     }
-  }, [step, previewFrames])
+  }, [step, previewReady, previewFrames])
 
   const advanceFromPreview = () => {
     if (step !== 'preview') return
-    if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-    animationIntervalRef.current = null
-    setStep('topic')
-  }
-
-  const advanceFromTopic = () => {
-    markTodayTopicSeen()
+    if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
+    previewIntervalRef.current = null
     setStep('camera')
   }
 
@@ -137,6 +120,75 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     enter: { opacity: 0, y: 20 },
     center: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 },
+  }
+
+  // Preview step: full-screen player matching the main rewind-2s UX.
+  if (step === 'preview') {
+    return (
+      <motion.div
+        className="preview-overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={advanceFromPreview}
+        style={{ position: 'fixed', inset: 0, zIndex: 50, cursor: 'pointer' }}
+      >
+        {!previewReady ? (
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+            {t('loadingPreview')}
+          </div>
+        ) : previewFrames.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, color: '#fff', textAlign: 'center', padding: 24 }}>
+            <h2 style={{ fontSize: 22 }}>{t('latestAnimation')}</h2>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+              {t('latestAnimationSub')}
+            </p>
+            <button className="primary" onClick={(e) => { e.stopPropagation(); advanceFromPreview() }}>
+              {t('continue')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <img
+              src={previewFrames[previewIndex]}
+              alt=""
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+            {previewIndex > 0 && (
+              <motion.img
+                src={previewFrames[previewIndex - 1]}
+                alt=""
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.08 }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+              />
+            )}
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 'calc(32px + env(safe-area-inset-bottom, 0px))',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 10,
+                pointerEvents: 'none',
+              }}
+            >
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2 }}>
+                {t('latestAnimation')}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
+                {t('latestAnimationSub')}
+              </span>
+            </div>
+          </>
+        )}
+      </motion.div>
+    )
   }
 
   return (
@@ -179,62 +231,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               autoFocus
             />
             <button className="primary" onClick={() => setStep('preview')}>{t('continue')}</button>
-          </motion.div>
-        )}
-
-        {step === 'preview' && (
-          <motion.div
-            key="preview"
-            className="onboard-step"
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3 }}
-            onClick={advanceFromPreview}
-            style={{ cursor: 'pointer' }}
-          >
-            <h2>{t('latestAnimation')}</h2>
-            <p className="onboard-body">{t('latestAnimationSub')}</p>
-            {previewLoading ? (
-              <p className="onboard-body">{t('loadingPreview')}</p>
-            ) : previewError ? (
-              <p className="onboard-body">{t('previewFailed')} {previewError}</p>
-            ) : previewFrames.length === 0 ? null : (
-              <div className="onboarding-animation" style={{ position: 'relative' }}>
-                <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
-                {currentFrameIndex > 0 && (
-                  <motion.img
-                    src={previewFrames[currentFrameIndex - 1]}
-                    alt=""
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ duration: 0.08 }}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
-                  />
-                )}
-              </div>
-            )}
-            <button className="primary" onClick={(e) => { e.stopPropagation(); advanceFromPreview() }}>{t('continue')}</button>
-          </motion.div>
-        )}
-
-        {step === 'topic' && (
-          <motion.div
-            key="topic"
-            className="onboard-step"
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3 }}
-          >
-            <div style={{ color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2 }}>
-              {t('dailyTopicIntro')}
-            </div>
-            <h2 style={{ fontSize: 36, lineHeight: 1.1 }}>{topic}</h2>
-            <p className="onboard-body">{t('dailyTopicHint')}</p>
-            <button className="primary" onClick={advanceFromTopic}>{t('dailyTopicGotIt')}</button>
           </motion.div>
         )}
 
