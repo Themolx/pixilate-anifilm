@@ -34,7 +34,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           logger.log('info', 'SYSTEM', `Onboarding: only ${frames.length} frames available, skipping preview`)
           return
         }
-        const thumbUrls = frames.slice(-12).map(f => framePublicUrl(f.thumb_path))
+        const thumbUrls = frames.reverse().slice(0, 12).map(f => framePublicUrl(f.thumb_path))
         setPreviewFrames(thumbUrls)
 
         // Preload all images to avoid black flicker
