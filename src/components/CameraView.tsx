@@ -6,6 +6,7 @@ import { captureFrame } from '../lib/capture'
 import { classifyBlob, loadModel } from '../lib/moderation'
 import { framePublicUrl } from '../lib/supabase'
 import { getDisplayName } from '../lib/onboarding'
+import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
 
 const POLL_FALLBACK_MS = 10_000
@@ -63,8 +64,9 @@ export function CameraView() {
     }
   }, [startCamera])
 
-  // Warm up NSFW model
+  // Init logger + warm up NSFW model
   useEffect(() => {
+    logger.log('info', 'SYSTEM', `CameraView started (device: ${getDeviceId()})`)
     loadModel().catch(err => {
       logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
@@ -163,14 +165,31 @@ export function CameraView() {
     setTimeout(() => setStatus(null), 2000)
   }
 
-  function handlePreviewOpen() {
+  async function handlePreviewOpen() {
     if (frames.length < 1) return
     const thumbs = frames.slice(-24).map(f => framePublicUrl(f.thumb_path))
     setPreviewFrames(thumbs)
     setPreviewIndex(0)
     setShowPreview(true)
 
-    logger.log('info', 'SYSTEM', `Preview opened: ${thumbs.length} frames at 12fps`)
+    logger.log('info', 'SYSTEM', `Preview opening: preloading ${thumbs.length} frames…`)
+
+    // Preload all images before starting animation
+    const preloadPromises = thumbs.map(
+      url =>
+        new Promise<void>((resolve) => {
+          const img = new Image()
+          img.onload = () => resolve()
+          img.onerror = () => {
+            logger.log('warn', 'SYSTEM', `Preview image failed to load: ${url}`)
+            resolve()
+          }
+          img.src = url
+        })
+    )
+
+    await Promise.all(preloadPromises)
+    logger.log('info', 'SYSTEM', `Preview: ${thumbs.length} frames preloaded, starting playback`)
 
     let frameIdx = 0
     previewIntervalRef.current = window.setInterval(() => {
@@ -305,7 +324,9 @@ export function CameraView() {
             title="Preview last 2 seconds"
             aria-label="Preview"
           >
-            PLAY
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style={{ margin: '0 auto' }}>
+              <polygon points="4,2 4,18 16,10" />
+            </svg>
           </button>
         </div>
 

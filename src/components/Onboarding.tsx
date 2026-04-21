@@ -65,16 +65,31 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (step !== 'preview' || previewFrames.length === 0 || previewPlayed) return
 
-    let frameIdx = 0
-    animationIntervalRef.current = window.setInterval(() => {
-      frameIdx++
-      setCurrentFrameIndex(frameIdx)
-      if (frameIdx >= previewFrames.length - 1) {
-        if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
-        setPreviewPlayed(true)
-        setTimeout(() => setStep('camera'), 500)
+    // Wait for all images to be preloaded
+    let loadedCount = 0
+    const checkLoaded = () => {
+      loadedCount = 0
+      for (const url of previewFrames) {
+        if (imagePreloadRef.current.has(url)) loadedCount++
       }
-    }, 1000 / 12)
+      if (loadedCount === previewFrames.length) startAnimation()
+      else setTimeout(checkLoaded, 50)
+    }
+
+    const startAnimation = () => {
+      let frameIdx = 0
+      animationIntervalRef.current = window.setInterval(() => {
+        frameIdx++
+        setCurrentFrameIndex(frameIdx)
+        if (frameIdx >= previewFrames.length - 1) {
+          if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
+          setPreviewPlayed(true)
+          setTimeout(() => setStep('camera'), 500)
+        }
+      }, 1000 / 12)
+    }
+
+    checkLoaded()
 
     return () => {
       if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
