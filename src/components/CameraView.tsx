@@ -178,7 +178,7 @@ export function CameraView() {
         const h = img.height * scale
         offCtx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
         offCtx.globalCompositeOperation = 'multiply'
-        offCtx.fillStyle = '#44ff88'
+        offCtx.fillStyle = '#4edca2'
         offCtx.fillRect(0, 0, off.width, off.height)
         offCtx.globalCompositeOperation = 'source-over'
 
@@ -263,14 +263,12 @@ export function CameraView() {
     }
 
     setCapturing(true)
-    showStatusMessage(t('capturing'), 'info')
     logger.log('info', 'CAPTURE', 'Starting capture')
 
     try {
       const cap = await captureFrame(v, zoom)
       logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
 
-      showStatusMessage(t('checking'), 'info')
       try {
         const verdict = await classifyBlob(cap.thumb)
         logger.log('info', 'MODERATION', `Scores: ${JSON.stringify(verdict.scores)}`)
@@ -308,7 +306,6 @@ export function CameraView() {
       await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
 
       logger.log('info', 'CAPTURE', 'Success!')
-      showStatusMessage(t('saved'), 'success')
       setThrottleMs(1500)
     } catch (err) {
       let msg = 'Unknown error'
@@ -401,30 +398,6 @@ export function CameraView() {
           value={Math.round(onionOpacity * 100)}
           onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
         />
-        <div style={{ display: 'flex', gap: 6, marginLeft: 28 }}>
-          {[1, 2, 3].map(z => (
-            <button
-              key={z}
-              onClick={() => setZoom(z)}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                border: zoom === z ? '2px solid var(--accent)' : '2px solid var(--text)',
-                background: zoom === z ? 'var(--accent)' : 'transparent',
-                color: zoom === z ? '#fff' : 'var(--text)',
-                fontWeight: '600',
-                fontSize: 12,
-                cursor: 'pointer',
-                transition: 'all 150ms ease',
-                padding: 0,
-                opacity: 0.5
-              }}
-            >
-              {z}x
-            </button>
-          ))}
-        </div>
       </motion.div>
 
       <div className="controls">

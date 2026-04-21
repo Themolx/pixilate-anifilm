@@ -18,6 +18,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
   const [previewDone, setPreviewDone] = useState(false)
+  const [previewPhase, setPreviewPhase] = useState<'intro' | 'playing'>('intro')
   const animationIntervalRef = useRef<number | null>(null)
   const imagePreloadRef = useRef<Map<string, HTMLImageElement>>(new Map())
 
@@ -62,9 +63,18 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })()
   }, [])
 
+  // 4s anticipation screen before the animation actually plays.
+  useEffect(() => {
+    if (step !== 'preview') return
+    if (previewPhase !== 'intro') return
+    const timer = window.setTimeout(() => setPreviewPhase('playing'), 4000)
+    return () => clearTimeout(timer)
+  }, [step, previewPhase])
+
   // Animation loop for preview — play once at 6fps, then auto-advance
   useEffect(() => {
     if (step !== 'preview') return
+    if (previewPhase !== 'playing') return
 
     if (previewFrames.length === 0) {
       setTimeout(() => setStep('camera'), 500)
@@ -101,7 +111,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     return () => {
       if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
     }
-  }, [step, previewFrames, previewDone])
+  }, [step, previewFrames, previewDone, previewPhase])
 
   async function requestCamera() {
     setCameraError(null)
@@ -182,29 +192,59 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
-            <h2>{t('liveAnimation')}</h2>
             {previewLoading ? (
-              <p className="onboard-body">{t('loadingPreview')}</p>
-            ) : previewError ? (
-              <p className="onboard-body">{t('previewFailed')} {previewError}</p>
-            ) : previewFrames.length > 0 && !previewDone ? (
               <>
-                <div className="onboarding-animation" style={{ position: 'relative' }}>
-                  <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
-                  {currentFrameIndex > 0 && (
-                    <motion.img
-                      src={previewFrames[currentFrameIndex - 1]}
-                      alt=""
-                      initial={{ opacity: 1 }}
-                      animate={{ opacity: 0 }}
-                      transition={{ duration: 0.08 }}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
-                    />
-                  )}
-                </div>
+                <h2>{t('liveAnimation')}</h2>
+                <p className="onboard-body">{t('loadingPreview')}</p>
               </>
-            ) : (
+            ) : previewError ? (
+              <>
+                <h2>{t('liveAnimation')}</h2>
+                <p className="onboard-body">{t('previewFailed')} {previewError}</p>
+              </>
+            ) : previewFrames.length === 0 ? (
               <p className="onboard-body">{t('readyNext')}</p>
+            ) : (
+              <AnimatePresence mode="wait">
+                {previewPhase === 'intro' ? (
+                  <motion.div
+                    key="intro"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <h2>{t('latestAnimation')}</h2>
+                    <p className="onboard-body">{t('latestAnimationSub')}</p>
+                  </motion.div>
+                ) : !previewDone ? (
+                  <motion.div
+                    key="playing"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <div className="onboarding-animation" style={{ position: 'relative' }}>
+                      <img src={previewFrames[currentFrameIndex]} alt="" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                      {currentFrameIndex > 0 && (
+                        <motion.img
+                          src={previewFrames[currentFrameIndex - 1]}
+                          alt=""
+                          initial={{ opacity: 1 }}
+                          animate={{ opacity: 0 }}
+                          transition={{ duration: 0.08 }}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.p key="done" className="onboard-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    {t('readyNext')}
+                  </motion.p>
+                )}
+              </AnimatePresence>
             )}
           </motion.div>
         )}

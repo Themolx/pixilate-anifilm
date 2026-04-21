@@ -11,9 +11,9 @@
   --border: #e0e0e0;
   --text: #111111;
   --text-muted: #888888;
-  --accent: #E8003D;
-  --accent-hover: #b5002e;
-  --ok: #00A862;
+  --accent: #f1262c;
+  --accent-hover: #c51d22;
+  --ok: #4edca2;
   --warn: #FF8C00;
   --controls-bg: rgba(255, 255, 255, 0.92);
 }
