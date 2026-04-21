@@ -169,7 +169,7 @@ export function CameraView() {
 
   async function handlePreviewOpen() {
     if (frames.length < 1) return
-    const thumbs = frames.slice(-24).map(f => framePublicUrl(f.thumb_path))
+    const thumbs = frames.slice(-24).map(f => framePublicUrl(f.storage_path))
     setPreviewFrames(thumbs)
     setPreviewIndex(0)
     setShowPreview(true)
@@ -315,7 +315,7 @@ export function CameraView() {
 
   return (
     <div className="app">
-      <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
 
@@ -344,7 +344,7 @@ export function CameraView() {
               style={{
                 width: 32,
                 height: 32,
-                borderRadius: 6,
+                borderRadius: '50%',
                 border: zoom === z ? '2px solid var(--accent)' : '2px solid var(--text)',
                 background: zoom === z ? 'var(--accent)' : 'transparent',
                 color: zoom === z ? '#fff' : 'var(--text)',
