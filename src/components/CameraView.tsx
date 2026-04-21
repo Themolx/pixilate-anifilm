@@ -72,12 +72,19 @@ export function CameraView() {
     }
   }, [startCamera])
 
-  // Init logger + warm up NSFW model
+  // Init logger + warm up NSFW model + lock orientation
   useEffect(() => {
     logger.log('info', 'SYSTEM', `CameraView started (device: ${getDeviceId()})`)
     loadModel().catch(err => {
       logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
+
+    // Lock to portrait mode on mobile if available
+    if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
+      (screen.orientation as any).lock('portrait').catch(() => {
+        logger.log('info', 'SYSTEM', 'Portrait lock not supported on this device')
+      })
+    }
   }, [])
 
   const refresh = useCallback(async () => {
@@ -327,7 +334,7 @@ export function CameraView() {
   return (
     <div className="app">
       <div className="viewport" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ touchAction: 'none' }}>
-        <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scaleX(-1) scale(${zoom})` }} />
+        <video ref={videoRef} autoPlay playsInline muted style={{ transform: `${facingMode === 'environment' ? 'scaleX(-1)' : ''} scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
 
         {/* Frame counter at top */}
