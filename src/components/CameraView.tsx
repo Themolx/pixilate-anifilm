@@ -295,6 +295,7 @@ export function CameraView() {
 
   function handleTouchMove(e: React.TouchEvent) {
     if (e.touches.length !== 2) return
+    e.preventDefault()
     const [t1, t2] = [e.touches[0], e.touches[1]]
     const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
 
@@ -318,37 +319,6 @@ export function CameraView() {
         <video ref={videoRef} autoPlay playsInline muted style={{ transform: `scale(${zoom})` }} />
         <canvas ref={canvasRef} className="onion-layer" />
 
-        {/* Zoom controls */}
-        <div style={{
-          position: 'absolute',
-          bottom: 80,
-          right: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          zIndex: 5
-        }}>
-          {[1, 2, 3].map(z => (
-            <button
-              key={z}
-              onClick={() => setZoom(z)}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                border: zoom === z ? '2px solid var(--accent)' : '2px solid var(--text)',
-                background: zoom === z ? 'var(--accent)' : 'transparent',
-                color: zoom === z ? '#fff' : 'var(--text)',
-                fontWeight: '600',
-                fontSize: 14,
-                cursor: 'pointer',
-                transition: 'all 150ms ease'
-              }}
-            >
-              {z}x
-            </button>
-          ))}
-        </div>
         {flash && <div className="capture-flash" />}
       </div>
 
@@ -366,6 +336,29 @@ export function CameraView() {
           value={onionOpacity * 100}
           onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
         />
+        <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+          {[1, 2, 3].map(z => (
+            <button
+              key={z}
+              onClick={() => setZoom(z)}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                border: zoom === z ? '2px solid var(--accent)' : '2px solid var(--text)',
+                background: zoom === z ? 'var(--accent)' : 'transparent',
+                color: zoom === z ? '#fff' : 'var(--text)',
+                fontWeight: '600',
+                fontSize: 12,
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+                padding: 0
+              }}
+            >
+              {z}x
+            </button>
+          ))}
+        </div>
       </motion.div>
 
       <div className="controls">
@@ -416,7 +409,7 @@ export function CameraView() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{ position: 'relative' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
           >
             {/* Current frame - always visible */}
             <img src={previewFrames[previewIndex]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
