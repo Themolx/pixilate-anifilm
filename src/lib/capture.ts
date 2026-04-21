@@ -22,24 +22,28 @@ function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   })
 }
 
-function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean) {
-  // Enforce 9:16 aspect ratio (portrait)
-  const targetRatio = 9 / 16
-  const sourceRatio = sw / sh
+function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbnail: boolean, zoom: number) {
+  // Match what the user sees: CSS zoom shows a centered sw/zoom × sh/zoom window.
+  const zw = sw / zoom
+  const zh = sh / zoom
+  const zx = (sw - zw) / 2
+  const zy = (sh - zh) / 2
 
-  let cropW = sw
-  let cropH = sh
+  // Enforce 9:16 aspect ratio (portrait) on the visible window.
+  const targetRatio = 9 / 16
+  const sourceRatio = zw / zh
+
+  let cropW = zw
+  let cropH = zh
 
   if (sourceRatio > targetRatio) {
-    // Source is too wide, crop width
-    cropW = sh * targetRatio
+    cropW = zh * targetRatio
   } else if (sourceRatio < targetRatio) {
-    // Source is too tall, crop height
-    cropH = sw / targetRatio
+    cropH = zw / targetRatio
   }
 
-  const sx = (sw - cropW) / 2
-  const sy = (sh - cropH) / 2
+  const sx = zx + (zw - cropW) / 2
+  const sy = zy + (zh - cropH) / 2
 
   // Use full resolution for full image, scaled down for thumbnail only
   let w = Math.round(cropW)
@@ -63,13 +67,13 @@ function drawCropped(source: CanvasImageSource, sw: number, sh: number, isThumbn
   return canvas
 }
 
-export async function captureFrame(video: HTMLVideoElement): Promise<Capture> {
+export async function captureFrame(video: HTMLVideoElement, zoom: number = 1): Promise<Capture> {
   const sw = video.videoWidth
   const sh = video.videoHeight
   if (!sw || !sh) throw new Error('video not ready')
 
-  const fullCanvas = drawCropped(video, sw, sh, false)
-  const thumbCanvas = drawCropped(video, sw, sh, true)
+  const fullCanvas = drawCropped(video, sw, sh, false, zoom)
+  const thumbCanvas = drawCropped(video, sw, sh, true, zoom)
 
   const [full, thumb] = await Promise.all([
     toBlob(fullCanvas, FULL_QUALITY),

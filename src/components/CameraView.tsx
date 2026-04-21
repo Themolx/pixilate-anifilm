@@ -8,6 +8,7 @@ import { framePublicUrl } from '../lib/supabase'
 import { getDisplayName } from '../lib/onboarding'
 import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
+import { t } from '../lib/i18n'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
@@ -24,7 +25,7 @@ export function CameraView() {
   const [capturing, setCapturing] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [statusType, setStatusType] = useState<'info' | 'error' | 'success'>('info')
-  const [onionOpacity, setOnionOpacity] = useState(0.3)
+  const [onionOpacity, setOnionOpacity] = useState(0.5)
   const [flash, setFlash] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewFrames, setPreviewFrames] = useState<string[]>([])
@@ -257,19 +258,19 @@ export function CameraView() {
     const v = videoRef.current
     if (!v || capturing || throttleMs > 0) return
     if (!cameraReady || !v.videoWidth) {
-      showStatusMessage('Camera not ready', 'error')
+      showStatusMessage(t('cameraNotReady'), 'error')
       return
     }
 
     setCapturing(true)
-    showStatusMessage('Capturing…', 'info')
+    showStatusMessage(t('capturing'), 'info')
     logger.log('info', 'CAPTURE', 'Starting capture')
 
     try {
-      const cap = await captureFrame(v)
+      const cap = await captureFrame(v, zoom)
       logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
 
-      showStatusMessage('Checking…', 'info')
+      showStatusMessage(t('checking'), 'info')
       try {
         const verdict = await classifyBlob(cap.thumb)
         logger.log('info', 'MODERATION', `Scores: ${JSON.stringify(verdict.scores)}`)
@@ -307,7 +308,7 @@ export function CameraView() {
       await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
 
       logger.log('info', 'CAPTURE', 'Success!')
-      showStatusMessage('Saved', 'success')
+      showStatusMessage(t('saved'), 'success')
       setThrottleMs(1500)
     } catch (err) {
       let msg = 'Unknown error'
@@ -330,10 +331,10 @@ export function CameraView() {
       if (msg.startsWith('moderation:')) {
         showStatusMessage(msg.slice('moderation:'.length), 'error')
       } else if (msg.includes('rate_limit')) {
-        showStatusMessage('Slow down! (12 frames/min max)', 'error')
+        showStatusMessage(t('slowDown'), 'error')
         logger.log('warn', 'RATE_LIMIT', 'Rate limit triggered')
       } else if (msg.includes('frame_cap_reached')) {
-        showStatusMessage('Festival frame cap reached', 'error')
+        showStatusMessage(t('frameCapReached'), 'error')
       } else {
         showStatusMessage(`Error: ${msg}`, 'error')
       }
@@ -395,12 +396,12 @@ export function CameraView() {
         <div className="onion-icon">◐</div>
         <input
           type="range"
-          min={0}
-          max={100}
-          value={onionOpacity * 100}
+          min={20}
+          max={80}
+          value={Math.round(onionOpacity * 100)}
           onChange={e => setOnionOpacity(Number(e.target.value) / 100)}
         />
-        <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+        <div style={{ display: 'flex', gap: 6, marginLeft: 28 }}>
           {[1, 2, 3].map(z => (
             <button
               key={z}
