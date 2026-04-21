@@ -30,14 +30,6 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Force portrait orientation on mobile */
-@media (max-width: 768px) {
-  html, body, #root {
-    max-width: 100vh;
-    max-height: 100vw;
-  }
-}
-
 button { font-family: inherit; cursor: pointer; border: none; }
 input, select { font-family: inherit; }
 
@@ -236,21 +228,11 @@ input, select { font-family: inherit; }
 }
 
 .viewport {
+  flex: 1;
   position: relative;
   overflow: hidden;
   background: #000;
   aspect-ratio: 9 / 16;
-  max-height: 100vh;
-  width: min(100%, calc(100vh * 9 / 16));
-  margin: 0 auto;
-}
-
-/* Mobile: lock to portrait */
-@media (max-width: 768px) {
-  .viewport {
-    width: 100%;
-    max-height: 100vh;
-  }
 }
 
 .viewport video {

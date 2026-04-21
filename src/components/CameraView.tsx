@@ -33,7 +33,6 @@ export function CameraView() {
   const [throttleMs, setThrottleMs] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
-  const [isLandscape, setIsLandscape] = useState(false)
   const previewIntervalRef = useRef<number | null>(null)
   const lastDistanceRef = useRef(0)
 
@@ -73,38 +72,12 @@ export function CameraView() {
     }
   }, [startCamera])
 
-  // Init logger + warm up NSFW model + detect orientation
+  // Init logger + warm up NSFW model
   useEffect(() => {
     logger.log('info', 'SYSTEM', `CameraView started (device: ${getDeviceId()})`)
     loadModel().catch(err => {
       logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
     })
-
-    // Detect orientation changes (mobile only)
-    const handleOrientationChange = () => {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      const isLand = window.innerHeight < window.innerWidth
-      setIsLandscape(isMobile && isLand)
-      if (isMobile && isLand) {
-        logger.log('info', 'SYSTEM', 'Landscape detected - please rotate to portrait')
-      }
-    }
-
-    window.addEventListener('orientationchange', handleOrientationChange)
-    window.addEventListener('resize', handleOrientationChange)
-    handleOrientationChange() // Check initial orientation
-
-    // Try to lock orientation if supported
-    if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
-      (screen.orientation as any).lock('portrait-primary').catch(() => {
-        logger.log('info', 'SYSTEM', 'Portrait lock not supported')
-      })
-    }
-
-    return () => {
-      window.removeEventListener('orientationchange', handleOrientationChange)
-      window.removeEventListener('resize', handleOrientationChange)
-    }
   }, [])
 
   const refresh = useCallback(async () => {
@@ -504,31 +477,6 @@ export function CameraView() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {isLandscape && (
-        <motion.div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            flexDirection: 'column',
-            gap: 20,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div style={{ textAlign: 'center', color: '#fff' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📱</div>
-            <h2 style={{ margin: '0 0 12px 0', fontSize: 24 }}>Please rotate to portrait</h2>
-            <p style={{ margin: 0, fontSize: 16, opacity: 0.8 }}>This app works best in portrait mode</p>
-          </div>
-        </motion.div>
-      )}
 
       {cameraError && (
         <motion.div
