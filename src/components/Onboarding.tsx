@@ -71,15 +71,16 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     return () => clearTimeout(timer)
   }, [step, previewPhase])
 
-  // Animation loop for preview — play once at 6fps, then auto-advance.
+  // Animation loop for preview — play once at 6fps. When done, the effect
+  // below navigates to the camera step.
   useEffect(() => {
     if (step !== 'preview') return
     if (previewPhase !== 'playing') return
     if (previewDone) return
 
     if (previewFrames.length === 0) {
-      const t = window.setTimeout(() => setStep('camera'), 500)
-      return () => clearTimeout(t)
+      setPreviewDone(true)
+      return
     }
 
     const timeouts: number[] = []
@@ -104,7 +105,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         if (frameIdx >= previewFrames.length - 1) {
           if (animationIntervalRef.current) clearInterval(animationIntervalRef.current)
           setPreviewDone(true)
-          timeouts.push(window.setTimeout(() => setStep('camera'), 500))
         }
       }, 1000 / 6)
     }
@@ -118,6 +118,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       timeouts.forEach(clearTimeout)
     }
   }, [step, previewFrames, previewDone, previewPhase])
+
+  // Navigate to camera once the preview finishes (or is skipped).
+  useEffect(() => {
+    if (step !== 'preview') return
+    if (!previewDone) return
+    setStep('camera')
+  }, [step, previewDone])
 
   const skipPreview = () => {
     if (step !== 'preview') return
@@ -218,9 +225,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 <h2>{t('liveAnimation')}</h2>
                 <p className="onboard-body">{t('previewFailed')} {previewError}</p>
               </>
-            ) : previewFrames.length === 0 ? (
-              <p className="onboard-body">{t('readyNext')}</p>
-            ) : (
+            ) : previewFrames.length === 0 ? null : (
               <AnimatePresence mode="wait">
                 {previewPhase === 'intro' ? (
                   <motion.div
@@ -233,7 +238,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                     <h2>{t('latestAnimation')}</h2>
                     <p className="onboard-body">{t('latestAnimationSub')}</p>
                   </motion.div>
-                ) : !previewDone ? (
+                ) : (
                   <motion.div
                     key="playing"
                     initial={{ opacity: 0 }}
@@ -255,10 +260,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                       )}
                     </div>
                   </motion.div>
-                ) : (
-                  <motion.p key="done" className="onboard-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    {t('readyNext')}
-                  </motion.p>
                 )}
               </AnimatePresence>
             )}
