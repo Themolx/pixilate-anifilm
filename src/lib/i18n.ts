@@ -17,7 +17,7 @@ const dict = {
     tagline: 'Exquisite corpse, stop-motion.',
     festival: 'Anifilm 2026.',
     intro: 'One shared animation for the whole festival. Add a frame, watch it live as others add theirs. Tip: move something a little between frames. Your hand, an object, yourself.',
-    limitsHint: 'Up to 40 frames per minute. A festival-wide frame cap applies, so add a few and leave room for others.',
+    limitsHint: ' ',
     start: 'Start',
 
     // -------- Onboarding: name screen ----------
@@ -63,10 +63,10 @@ const dict = {
 
   cs: {
     // -------- Onboarding: úvodní obrazovka ----------
-    tagline: 'Kolektivní stop-motion.',
+    tagline: 'PIXILACE! PIXILACE?! PIXILACE!!',
     festival: 'Anifilm 2026.',
-    intro: 'Jedna sdílená animace pro celý festival. Přidej políčko a sleduj, jak ostatní přidávají svoje. Tip: mezi snímky něčím pohni. Rukou, objektem, sebou.',
-    limitsHint: 'Max 40 políček za minutu. Platí celkový festivalový limit, tak přidej pár a nech prostor ostatním.',
+    intro: 'Jedna sdílená animace pro celý festival. Vyfoť frame a sleduj, jak ostatní přidávají svoje.',
+    limitsHint: ' ',
     start: 'Začít',
 
     // -------- Onboarding: jméno ----------
@@ -77,16 +77,16 @@ const dict = {
     continue: 'Pokračovat',
 
     // -------- Onboarding: ukázka poslední animace ----------
-    latestAnimation: 'Poslední animace',
-    latestAnimationSub: 'Podívej se, co už ostatní nafotili. Místo finální projekce najdeš ve festivalovém programu.',
+    latestAnimation: 'Poslední 2s',
+    latestAnimationSub: 'Podívej se, co už ostatní nafotili. Finální projekce bude tady! "papir"',
     loadingPreview: 'Načítám ukázku...',
 
     // -------- Onboarding: přístup ke kameře (poslední obrazovka) ----------
     cameraAccess: 'Potřebujeme přístup ke kameře',
-    cameraAccessBody: 'Pixilate potřebuje tvoji kameru k focení políček. Fotky jdou do sdílené festivalové animace.',
+    cameraAccessBody: 'Fotky jdou do sdílené festivalové animace.',
     publicNotice: 'Fotky jsou veřejné, zobrazí se se tvým jménem a zůstávají ve festivalové animaci.',
     cameraDenied: 'Nepodařilo se otevřít kameru.',
-    cameraHint: 'iOS: Nastavení > Safari > Kamera > Povolit. Desktop: klikni na ikonu kamery v adresním řádku a povol přístup.',
+    cameraHint: ' ',
     tryAgain: 'Zkusit znovu',
     allowCamera: 'Povolit kameru',
 
@@ -95,15 +95,15 @@ const dict = {
     checking: 'Kontroluji...',
     saved: 'Uloženo',
     cameraNotReady: 'Kamera není připravená',
-    slowDown: 'Pomaleji! (max 40 políček/min)',
+    slowDown: 'Pomaleji! :( (max 40 políček/min)',
     frameCapReached: 'Limit festivalu vyčerpán',
     cameraErrorPrefix: 'Chyba kamery:',
 
     // -------- Denní téma ----------
     dailyTopicLabel: 'Dnešní téma',
     dailyTopicIntro: 'Dnešní téma',
-    dailyTopicHint: 'Nepovinné. Pokud chceš, zkus to dostat do dalšího políčka.',
-    dailyTopicGotIt: 'OK',
+    dailyTopicHint: 'Nepovinné.',
+    dailyTopicGotIt: 'Juchů',
 
     // -------- Zámek na výšku (když je mobil natočen na šířku) ----------
     landscapeTitle: 'Otoč telefon na výšku',

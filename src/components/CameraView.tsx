@@ -11,6 +11,7 @@ import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
 import { t } from '../lib/i18n'
 import { getTodayTopic, hasSeenTodayTopic, markTodayTopicSeen } from '../lib/daily'
+import { BrushDeco } from './BrushDeco'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
@@ -622,15 +623,18 @@ export function CameraView() {
               padding: 32,
               textAlign: 'left',
               cursor: 'pointer',
+              overflow: 'hidden',
+              isolation: 'isolate',
             }}
           >
-            <div style={{ color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
+            <BrushDeco count={3} />
+            <div style={{ position: 'relative', zIndex: 1, color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
               {t('dailyTopicIntro')}
             </div>
-            <div style={{ color: 'var(--text)', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
+            <div style={{ position: 'relative', zIndex: 1, color: 'var(--text)', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
               {topic}
             </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 320 }}>
+            <div style={{ position: 'relative', zIndex: 1, color: 'var(--text-muted)', fontSize: 14, maxWidth: 320 }}>
               {t('dailyTopicHint')}
             </div>
           </motion.div>

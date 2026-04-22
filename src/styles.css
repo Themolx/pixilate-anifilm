@@ -85,6 +85,13 @@ input, select { font-family: inherit; }
   max-width: 400px;
   width: 100%;
   text-align: left;
+  position: relative;
+  isolation: isolate;
+}
+
+.onboard-step > *:not(.brush-deco) {
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes fadeIn {

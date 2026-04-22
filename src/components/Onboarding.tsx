@@ -6,6 +6,7 @@ import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { getDeviceId } from '../lib/device'
 import { t } from '../lib/i18n'
+import { BrushDeco } from './BrushDeco'
 
 type Step = 'start' | 'name' | 'preview' | 'camera'
 
@@ -205,6 +206,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
+            <BrushDeco count={3} />
             <h1>PIXILATE</h1>
             <p className="onboard-tag">{t('tagline')}<br />{t('festival')}</p>
             <p className="onboard-body">{t('intro')}</p>
@@ -223,6 +225,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
+            <BrushDeco count={2} />
             <h2>{t('nameQuestion')}</h2>
             <p className="onboard-body">
               {t('nameHint')} <strong>{t('nameHintOptional')}</strong>
@@ -248,6 +251,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
+            <BrushDeco count={2} />
             <h2>{t('cameraAccess')}</h2>
             <p className="onboard-body">{t('cameraAccessBody')}</p>
             <p className="onboard-body onboard-hint">{t('publicNotice')}</p>
