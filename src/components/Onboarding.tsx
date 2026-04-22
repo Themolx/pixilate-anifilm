@@ -6,6 +6,7 @@ import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { getDeviceId } from '../lib/device'
 import { t } from '../lib/i18n'
+import { rt } from '../lib/format'
 import { BrushDeco } from './BrushDeco'
 
 type Step = 'start' | 'name' | 'preview' | 'camera'
@@ -20,6 +21,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewFrames, setPreviewFrames] = useState<string[]>([])
   const [previewIndex, setPreviewIndex] = useState(0)
   const [previewReady, setPreviewReady] = useState(false)
+  const [previewDone, setPreviewDone] = useState(false)
   const previewIntervalRef = useRef<number | null>(null)
 
   const deviceId = getDeviceId()
@@ -76,12 +78,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
     let frameIdx = 0
     setPreviewIndex(0)
+    setPreviewDone(false)
     previewIntervalRef.current = window.setInterval(() => {
       frameIdx++
       setPreviewIndex(frameIdx)
       if (frameIdx >= previewFrames.length - 1) {
         if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
         previewIntervalRef.current = null
+        setPreviewDone(true)
       }
     }, 1000 / PREVIEW_FPS)
 
@@ -167,26 +171,52 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
               />
             )}
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 'calc(32px + env(safe-area-inset-bottom, 0px))',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 10,
-                pointerEvents: 'none',
-              }}
-            >
-              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2 }}>
-                {t('latestAnimation')}
-              </span>
-              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
-                {t('latestAnimationSub')}
-              </span>
-            </div>
+            {!previewDone ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 'calc(32px + env(safe-area-inset-bottom, 0px))',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  pointerEvents: 'none',
+                }}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2 }}>
+                  {t('latestAnimation')}
+                </span>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                style={{
+                  position: 'absolute',
+                  left: 16,
+                  right: 16,
+                  bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+                  padding: '20px 22px',
+                  background: 'rgba(255,255,255,0.96)',
+                  borderRadius: 14,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                  pointerEvents: 'none',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                }}
+              >
+                <div style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
+                  {rt(t('previewAddMore'))}
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                  {t('previewTapContinue')}
+                </div>
+              </motion.div>
+            )}
           </>
         )}
       </motion.div>
@@ -209,8 +239,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <BrushDeco count={3} />
             <h1>PIXILATE</h1>
             <p className="onboard-tag">{t('tagline')}<br />{t('festival')}</p>
-            <p className="onboard-body">{t('intro')}</p>
-            <p className="onboard-body onboard-hint">{t('limitsHint')}</p>
+            <p className="onboard-body">{rt(t('intro'))}</p>
+            <p className="onboard-body onboard-hint">{rt(t('limitsHint'))}</p>
             <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
           </motion.div>
         )}
@@ -228,7 +258,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <BrushDeco count={2} />
             <h2>{t('nameQuestion')}</h2>
             <p className="onboard-body">
-              {t('nameHint')} <strong>{t('nameHintOptional')}</strong>
+              {rt(t('nameHint'))} <strong>{t('nameHintOptional')}</strong>
             </p>
             <input
               value={name}
@@ -253,8 +283,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           >
             <BrushDeco count={2} />
             <h2>{t('cameraAccess')}</h2>
-            <p className="onboard-body">{t('cameraAccessBody')}</p>
-            <p className="onboard-body onboard-hint">{t('publicNotice')}</p>
+            <p className="onboard-body">{rt(t('cameraAccessBody'))}</p>
+            <p className="onboard-body onboard-hint">{rt(t('publicNotice'))}</p>
             {cameraError && (
               <motion.div
                 className="onboard-error"
