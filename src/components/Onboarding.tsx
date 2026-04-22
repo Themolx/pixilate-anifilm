@@ -242,6 +242,16 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <p className="onboard-body">{rt(t('intro'))}</p>
             <p className="onboard-body onboard-hint">{rt(t('limitsHint'))}</p>
             <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
+            <a
+              className="onboard-ig"
+              href="https://instagram.com/anifilmpixilace"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+            >
+              <span className="onboard-ig-label">{t('followUs')}</span>
+              <span className="onboard-ig-handle">{t('instagramHandle')}</span>
+            </a>
           </motion.div>
         )}
 

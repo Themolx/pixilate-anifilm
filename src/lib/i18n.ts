@@ -61,6 +61,11 @@ const dict = {
     // -------- Landscape lock (shown when phone is rotated) ----------
     landscapeTitle: 'Please rotate to portrait',
     landscapeBody: 'Pixilate is designed for vertical use. Rotate your device to continue.',
+    landscapeLockTip: 'Tip: **lock rotation** in your phone settings so this does not happen mid-capture.',
+
+    // -------- Instagram follow ----------
+    followUs: 'Follow',
+    instagramHandle: '@anifilmpixilace',
   },
 
   cs: {
@@ -112,6 +117,11 @@ const dict = {
     // -------- Zámek na výšku (když je mobil natočen na šířku) ----------
     landscapeTitle: 'Otoč telefon na výšku',
     landscapeBody: 'Pixilate je dělaný na výšku. Otoč telefon a pokračuj.',
+    landscapeLockTip: 'Tip: v nastavení telefonu si **zamkni rotaci obrazovky**, ať se ti to nestane uprostřed focení.',
+
+    // -------- Instagram ----------
+    followUs: 'Sleduj',
+    instagramHandle: '@anifilmpixilace',
   },
 } as const
 

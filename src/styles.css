@@ -94,6 +94,32 @@ input, select { font-family: inherit; }
   z-index: 1;
 }
 
+.onboard-ig {
+  align-self: center;
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.onboard-ig-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+}
+
+.onboard-ig-handle {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1244,6 +1270,17 @@ input, select { font-family: inherit; }
     font-size: 14px;
     max-width: 280px;
     line-height: 1.5;
+  }
+  .landscape-lock .landscape-tip {
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: var(--bg-raised);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .landscape-lock .landscape-tip strong {
+    color: var(--accent);
   }
 }
 
