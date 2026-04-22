@@ -45,6 +45,11 @@ export function CameraView() {
   const dismissTopic = useCallback(() => {
     markTodayTopicSeen()
     setShowTopicIntro(false)
+    // iOS throttles video playback behind a full-screen overlay; nudge it back.
+    const v = videoRef.current
+    if (v && v.paused) {
+      v.play().catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -69,7 +74,20 @@ export function CameraView() {
       const v = videoRef.current
       if (v) {
         v.srcObject = stream
-        v.onloadeddata = () => setCameraReady(true)
+        // iOS Safari sometimes skips loadeddata; treat multiple events as ready.
+        const markReady = () => setCameraReady(true)
+        v.onloadeddata = markReady
+        v.onloadedmetadata = markReady
+        v.oncanplay = markReady
+        v.onplaying = markReady
+        try {
+          await v.play()
+        } catch (playErr) {
+          logger.log('warn', 'SYSTEM', `video.play() rejected: ${playErr instanceof Error ? playErr.message : String(playErr)}`)
+        }
+        // Safety fallback: if none of the above fire within 3.5s, still mark
+        // ready so the UI isn't stuck on a white screen behind the topic modal.
+        window.setTimeout(() => setCameraReady(prev => prev || true), 3500)
       }
       logger.log('info', 'SYSTEM', `Camera started (${facing})`)
     } catch (err) {
