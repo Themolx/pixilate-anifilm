@@ -152,27 +152,44 @@ export function CameraView() {
     return () => clearInterval(timer)
   }, [throttleMs])
 
-  // Onion skin — draws last frame tinted green over live camera.
-  // Why inline + retry: the row is inserted BEFORE the blob upload finishes,
-  // so a fresh realtime INSERT can 404 the image briefly. We retry a few times.
-  useEffect(() => {
+  // Onion skin: split image load from opacity redraw so dragging the slider
+  // doesn't reload the image (which caused visible flicker).
+  // - tintedRef holds the pre-tinted offscreen canvas for the current frame.
+  // - Loader effect only re-runs when the target frame or its URL changes.
+  // - Render effect redraws when opacity changes — cheap, no image traffic.
+  const tintedRef = useRef<HTMLCanvasElement | null>(null)
+
+  const lastFrame = frames.length > 0 ? frames[frames.length - 1] : null
+  const lastFrameId = lastFrame?.id ?? null
+  const lastFrameUrl = lastFrame
+    ? (localCapture && localCapture.id === lastFrame.id
+        ? localCapture.url
+        : framePublicUrl(lastFrame.storage_path))
+    : null
+
+  const renderOnion = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
     canvas.width = canvas.offsetWidth * window.devicePixelRatio
     canvas.height = canvas.offsetHeight * window.devicePixelRatio
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const tinted = tintedRef.current
+    if (!tinted) return
+    ctx.globalAlpha = onionOpacity
+    ctx.drawImage(tinted, 0, 0, canvas.width, canvas.height)
+    ctx.globalAlpha = 1
+  }, [onionOpacity])
 
-    if (frames.length === 0) return
-    const lastFrame = frames[frames.length - 1]
-    if (!lastFrame) return
+  // Loader: fetch image, build tinted offscreen canvas once per frame change.
+  useEffect(() => {
+    if (!lastFrameId || !lastFrameUrl) {
+      tintedRef.current = null
+      renderOnion()
+      return
+    }
 
-    // Prefer local blob for our own capture — avoids the upload race on slow networks.
-    const url = localCapture && localCapture.id === lastFrame.id
-      ? localCapture.url
-      : framePublicUrl(lastFrame.storage_path)
     let cancelled = false
     let retryTimer: number | null = null
 
@@ -182,41 +199,44 @@ export function CameraView() {
       img.crossOrigin = 'anonymous'
       img.onload = () => {
         if (cancelled) return
-        canvas.width = canvas.offsetWidth * window.devicePixelRatio
-        canvas.height = canvas.offsetHeight * window.devicePixelRatio
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-
+        // Build at device resolution of the current viewport
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const W = canvas.offsetWidth * window.devicePixelRatio
+        const H = canvas.offsetHeight * window.devicePixelRatio
         const off = document.createElement('canvas')
-        off.width = canvas.width
-        off.height = canvas.height
+        off.width = W
+        off.height = H
         const offCtx = off.getContext('2d')!
-        const scale = Math.max(canvas.width / img.width, canvas.height / img.height)
+        const scale = Math.max(W / img.width, H / img.height)
         const w = img.width * scale
         const h = img.height * scale
-        offCtx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
+        offCtx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
         offCtx.globalCompositeOperation = 'multiply'
         offCtx.fillStyle = '#4edca2'
-        offCtx.fillRect(0, 0, off.width, off.height)
+        offCtx.fillRect(0, 0, W, H)
         offCtx.globalCompositeOperation = 'source-over'
-
-        ctx.globalAlpha = onionOpacity
-        ctx.drawImage(off, 0, 0)
-        ctx.globalAlpha = 1
+        tintedRef.current = off
+        renderOnion()
       }
       img.onerror = () => {
         if (cancelled || tryNum >= 6) return
         retryTimer = window.setTimeout(() => attempt(tryNum + 1), 400 * (tryNum + 1))
       }
-      img.src = url
+      img.src = lastFrameUrl
     }
 
     attempt(0)
-
     return () => {
       cancelled = true
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [frames, onionOpacity, localCapture])
+  }, [lastFrameId, lastFrameUrl, renderOnion])
+
+  // Render whenever opacity changes (cheap: just draws the cached tinted canvas).
+  useEffect(() => {
+    renderOnion()
+  }, [onionOpacity, renderOnion])
 
   function showStatusMessage(msg: string, type: 'info' | 'error' | 'success' = 'info') {
     setStatus(msg)
@@ -461,6 +481,7 @@ export function CameraView() {
       </div>
       </div>
 
+      <div className="bottom-panel">
       <motion.div
         className="onion-control-bar"
         initial={{ opacity: 0, y: 20 }}
@@ -535,6 +556,7 @@ export function CameraView() {
             </svg>
           </button>
         </div>
+      </div>
       </div>
 
       <AnimatePresence>
@@ -628,12 +650,10 @@ export function CameraView() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="onboard-error">
-            <strong>Camera error: {cameraError}</strong>
-            <p className="onboard-hint">
-              iOS: Settings → Safari → Camera → Allow. Desktop: click the camera icon in the address bar.
-            </p>
+            <strong>{t('cameraErrorPrefix')} {cameraError}</strong>
+            <p className="onboard-hint">{t('cameraHint')}</p>
             <button className="primary" onClick={startCamera} style={{ marginTop: '8px', maxWidth: 'none' }}>
-              Retry
+              {t('tryAgain')}
             </button>
           </div>
         </motion.div>

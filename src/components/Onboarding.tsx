@@ -23,16 +23,17 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const deviceId = getDeviceId()
 
-  // Fetch + preload last N frames (same source as the main rewind button)
+  // Fetch + preload last N frames — SAME source + slice as the main rewind
+  // button: all frames (ASC), take the last PREVIEW_FRAMES. listFrames returns
+  // ASC by seq; we must slice the TAIL, not reverse the first N.
   useEffect(() => {
     let alive = true
     ;(async () => {
       try {
-        const rows = await listFrames(PREVIEW_FRAMES)
+        const rows = await listFrames()
         if (!alive) return
-        // listFrames returns newest-first; flip for chronological playback
-        const ordered = [...rows].reverse()
-        const urls = ordered.map(f => framePublicUrl(f.storage_path))
+        const tail = rows.slice(-PREVIEW_FRAMES)
+        const urls = tail.map(f => framePublicUrl(f.storage_path))
 
         if (urls.length < 3) {
           setPreviewFrames([])
@@ -222,7 +223,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             transition={{ duration: 0.3 }}
           >
             <h2>{t('nameQuestion')}</h2>
-            <p className="onboard-body">{t('nameHint')}</p>
+            <p className="onboard-body">
+              {t('nameHint')} <strong>{t('nameHintOptional')}</strong>
+            </p>
             <input
               value={name}
               onChange={e => setName(e.target.value)}

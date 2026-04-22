@@ -75,7 +75,7 @@ create policy storage_read_pixilate   on storage.objects for select using (bucke
 create policy storage_insert_pixilate on storage.objects for insert with check (bucket_id = 'pixilate-frames' and name like 'frames/%');
 create policy storage_delete_admin    on storage.objects for delete using (bucket_id = 'pixilate-frames' and public.is_admin());
 
--- Rate limit: 12 frames/min/device ---------------------------------------
+-- Rate limit: 40 frames/min/device ---------------------------------------
 create or replace function public.enforce_frame_rate() returns trigger
 language plpgsql as $$
 declare recent int;
@@ -84,7 +84,7 @@ begin
     from public.frames
    where device_id  = new.device_id
      and created_at > now() - interval '1 minute';
-  if recent >= 12 then
+  if recent >= 40 then
     raise exception 'rate_limit' using errcode = 'check_violation';
   end if;
   return new;

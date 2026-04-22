@@ -1,5 +1,6 @@
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AppRoutes } from './routes'
+import { t } from './lib/i18n'
 
 export default function App() {
   return (
@@ -7,8 +8,8 @@ export default function App() {
       <AppRoutes />
       <div className="landscape-lock" aria-hidden="true">
         <div className="icon">↺</div>
-        <h2>Please rotate to portrait</h2>
-        <p>Pixilate is designed for vertical use. Rotate your device to continue.</p>
+        <h2>{t('landscapeTitle')}</h2>
+        <p>{t('landscapeBody')}</p>
       </div>
     </ErrorBoundary>
   )
