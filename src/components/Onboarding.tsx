@@ -208,6 +208,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <h1>PIXILATE</h1>
             <p className="onboard-tag">{t('tagline')}<br />{t('festival')}</p>
             <p className="onboard-body">{t('intro')}</p>
+            <p className="onboard-body onboard-hint">{t('limitsHint')}</p>
             <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
           </motion.div>
         )}
@@ -249,6 +250,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           >
             <h2>{t('cameraAccess')}</h2>
             <p className="onboard-body">{t('cameraAccessBody')}</p>
+            <p className="onboard-body onboard-hint">{t('publicNotice')}</p>
             {cameraError && (
               <motion.div
                 className="onboard-error"

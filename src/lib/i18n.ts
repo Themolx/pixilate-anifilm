@@ -1,8 +1,8 @@
 // ===========================================================================
 // All user-facing text for Pixilate.
-// Edit the strings in the `en` and `cs` objects below — everything the user
+// Edit the strings in the `en` and `cs` objects below. Everything the user
 // sees comes from this file. Device language (navigator.language) picks which
-// dictionary is used at runtime: anything starting with "cs" → Czech, else EN.
+// dictionary is used at runtime: anything starting with "cs" => Czech, else EN.
 // ===========================================================================
 
 type Lang = 'cs' | 'en'
@@ -16,7 +16,8 @@ const dict = {
     // -------- Onboarding: start screen ----------
     tagline: 'Exquisite corpse, stop-motion.',
     festival: 'Anifilm 2026.',
-    intro: 'One shared animation for the whole festival. Add a frame, watch it live as others add theirs.',
+    intro: 'One shared animation for the whole festival. Add a frame, watch it live as others add theirs. Tip: move something a little between frames. Your hand, an object, yourself.',
+    limitsHint: 'Up to 40 frames per minute. A festival-wide frame cap applies, so add a few and leave room for others.',
     start: 'Start',
 
     // -------- Onboarding: name screen ----------
@@ -27,24 +28,22 @@ const dict = {
     continue: 'Continue',
 
     // -------- Onboarding: latest-animation preview ----------
-    liveAnimation: 'Live animation',
     latestAnimation: 'The latest animation',
-    latestAnimationSub: 'Watch what everyone made so far',
-    loadingPreview: 'Loading preview…',
-    previewFailed: 'Could not load preview:',
-    readyNext: 'Ready for next step…',
+    latestAnimationSub: 'Watch what everyone made so far. Final screening location announced in the festival program.',
+    loadingPreview: 'Loading preview...',
 
     // -------- Onboarding: camera permission (last screen) ----------
     cameraAccess: 'Camera access required',
     cameraAccessBody: 'Pixilate needs your camera to capture frames. Photos go into the shared festival timeline.',
+    publicNotice: 'Photos are public, shown with your name, and stay in the festival timeline.',
     cameraDenied: "Couldn't access the camera.",
-    cameraHint: 'iOS: Settings → Safari → Camera → Allow. Desktop: click the camera icon in the address bar and allow.',
+    cameraHint: 'iOS: Settings > Safari > Camera > Allow. Desktop: click the camera icon in the address bar and allow.',
     tryAgain: 'Try again',
     allowCamera: 'Allow camera',
 
     // -------- Camera view: status messages (shown only on errors) ----------
-    capturing: 'Capturing…',
-    checking: 'Checking…',
+    capturing: 'Capturing...',
+    checking: 'Checking...',
     saved: 'Saved',
     cameraNotReady: 'Camera not ready',
     slowDown: 'Slow down! (40 frames/min max)',
@@ -54,7 +53,7 @@ const dict = {
     // -------- Daily topic modal ----------
     dailyTopicLabel: "Today's topic",
     dailyTopicIntro: "Today's topic",
-    dailyTopicHint: 'Try to work this into your next frame.',
+    dailyTopicHint: 'Optional. Try to work this into your next frame if you like.',
     dailyTopicGotIt: 'Got it',
 
     // -------- Landscape lock (shown when phone is rotated) ----------
@@ -64,37 +63,36 @@ const dict = {
 
   cs: {
     // -------- Onboarding: úvodní obrazovka ----------
-    tagline: 'Kolektivní animace po políčkách.',
+    tagline: 'Kolektivní stop-motion.',
     festival: 'Anifilm 2026.',
-    intro: 'Jedna sdílená animace pro celý festival. Přidej políčko a sleduj, jak ostatní přidávají svoje.',
+    intro: 'Jedna sdílená animace pro celý festival. Přidej políčko a sleduj, jak ostatní přidávají svoje. Tip: mezi snímky něčím pohni. Rukou, objektem, sebou.',
+    limitsHint: 'Max 40 políček za minutu. Platí celkový festivalový limit, tak přidej pár a nech prostor ostatním.',
     start: 'Začít',
 
     // -------- Onboarding: jméno ----------
     nameQuestion: 'Jak ti máme říkat?',
     nameHint: 'Zobrazí se u políček, která nafotíš.',
     nameHintOptional: 'Nepovinné.',
-    namePlaceholder: 'Tvoje jméno',
+    namePlaceholder: 'jméno',
     continue: 'Pokračovat',
 
     // -------- Onboarding: ukázka poslední animace ----------
-    liveAnimation: 'Živá animace',
     latestAnimation: 'Poslední animace',
-    latestAnimationSub: 'Podívej se, co už ostatní nafotili',
-    loadingPreview: 'Načítám ukázku…',
-    previewFailed: 'Nepodařilo se načíst ukázku:',
-    readyNext: 'Připraveno…',
+    latestAnimationSub: 'Podívej se, co už ostatní nafotili. Místo finální projekce najdeš ve festivalovém programu.',
+    loadingPreview: 'Načítám ukázku...',
 
     // -------- Onboarding: přístup ke kameře (poslední obrazovka) ----------
     cameraAccess: 'Potřebujeme přístup ke kameře',
     cameraAccessBody: 'Pixilate potřebuje tvoji kameru k focení políček. Fotky jdou do sdílené festivalové animace.',
+    publicNotice: 'Fotky jsou veřejné, zobrazí se se tvým jménem a zůstávají ve festivalové animaci.',
     cameraDenied: 'Nepodařilo se otevřít kameru.',
-    cameraHint: 'iOS: Nastavení → Safari → Kamera → Povolit. Desktop: klikni na ikonu kamery v adresním řádku a povol přístup.',
+    cameraHint: 'iOS: Nastavení > Safari > Kamera > Povolit. Desktop: klikni na ikonu kamery v adresním řádku a povol přístup.',
     tryAgain: 'Zkusit znovu',
     allowCamera: 'Povolit kameru',
 
     // -------- Kamera: statusové zprávy (jen při chybě) ----------
-    capturing: 'Focení…',
-    checking: 'Kontroluji…',
+    capturing: 'Focení...',
+    checking: 'Kontroluji...',
     saved: 'Uloženo',
     cameraNotReady: 'Kamera není připravená',
     slowDown: 'Pomaleji! (max 40 políček/min)',
@@ -104,11 +102,11 @@ const dict = {
     // -------- Denní téma ----------
     dailyTopicLabel: 'Dnešní téma',
     dailyTopicIntro: 'Dnešní téma',
-    dailyTopicHint: 'Zkus to dostat do dalšího políčka.',
-    dailyTopicGotIt: 'Beru',
+    dailyTopicHint: 'Nepovinné. Pokud chceš, zkus to dostat do dalšího políčka.',
+    dailyTopicGotIt: 'OK',
 
     // -------- Zámek na výšku (když je mobil natočen na šířku) ----------
-    landscapeTitle: 'Otoč prosím do portrait módu',
+    landscapeTitle: 'Otoč telefon na výšku',
     landscapeBody: 'Pixilate je dělaný na výšku. Otoč telefon a pokračuj.',
   },
 } as const

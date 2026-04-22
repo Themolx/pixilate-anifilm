@@ -40,6 +40,9 @@ Live at: https://themolx.github.io/pixilate-anifilm/
 - Portrait-locked via CSS `.landscape-lock` in App.tsx.
 - Device language: `navigator.language.startsWith('cs')` → Czech, else English.
 
+## Style rules
+- **No emojis or em dashes ever** 
+
 ## Two git repos live under /Users/martintomek
 - `/Users/martintomek` itself is a git repo (prezentaceAI, remote `martintomekvfx/prezentaceAI`)
 - `/Users/martintomek/pixilate` is this repo
@@ -53,3 +56,5 @@ git add -A
 git commit -m "..."
 git push               # origin already has token baked in
 ```
+
+
