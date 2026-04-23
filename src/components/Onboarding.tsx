@@ -173,20 +173,16 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           </div>
         ) : (
           <>
-            <AnimatePresence>
-              {!previewIntroShown && (
-                <motion.img
-                  key={`frame-${previewIndex}`}
-                  src={previewFrames[previewIndex]}
-                  alt=""
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-                />
-              )}
-            </AnimatePresence>
+            {!previewIntroShown && (
+              <motion.img
+                src={previewFrames[previewIndex]}
+                alt=""
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            )}
             {!previewIntroShown && previewIndex > 0 && (
               <motion.img
                 src={previewFrames[previewIndex - 1]}

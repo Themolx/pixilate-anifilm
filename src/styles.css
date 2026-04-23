@@ -605,7 +605,7 @@ input, select { font-family: inherit; }
 .preview-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
