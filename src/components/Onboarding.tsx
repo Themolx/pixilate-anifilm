@@ -22,6 +22,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewIndex, setPreviewIndex] = useState(0)
   const [previewReady, setPreviewReady] = useState(false)
   const [previewDone, setPreviewDone] = useState(false)
+  const [previewIntroShown, setPreviewIntroShown] = useState(true)
   const previewIntervalRef = useRef<number | null>(null)
 
   const deviceId = getDeviceId()
@@ -70,11 +71,21 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     return () => { alive = false }
   }, [])
 
+  // Hold an intro card for ~1.8s after entering the preview step so the
+  // animation doesn't pop in jarringly. Reset whenever we (re)enter preview.
+  useEffect(() => {
+    if (step !== 'preview') return
+    setPreviewIntroShown(true)
+    const id = window.setTimeout(() => setPreviewIntroShown(false), 1800)
+    return () => clearTimeout(id)
+  }, [step])
+
   // Play the preview exactly like the main rewind button: iterate once at 6fps.
   useEffect(() => {
     if (step !== 'preview') return
     if (!previewReady) return
     if (previewFrames.length === 0) return
+    if (previewIntroShown) return
 
     let frameIdx = 0
     setPreviewIndex(0)
@@ -93,10 +104,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
       previewIntervalRef.current = null
     }
-  }, [step, previewReady, previewFrames])
+  }, [step, previewReady, previewFrames, previewIntroShown])
 
   const advanceFromPreview = () => {
     if (step !== 'preview') return
+    // A tap during the intro card just skips the intro, not the whole step.
+    if (previewIntroShown) {
+      setPreviewIntroShown(false)
+      return
+    }
     if (previewIntervalRef.current) clearInterval(previewIntervalRef.current)
     previewIntervalRef.current = null
     setStep('camera')
@@ -138,16 +154,17 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         onClick={advanceFromPreview}
-        style={{ position: 'fixed', inset: 0, zIndex: 50, cursor: 'pointer' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 50, cursor: 'pointer', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', isolation: 'isolate' }}
       >
         {!previewReady ? (
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
             {t('loadingPreview')}
           </div>
         ) : previewFrames.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, color: '#fff', textAlign: 'center', padding: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, color: 'var(--text)', textAlign: 'center', padding: 24 }}>
+            <BrushDeco count={2} />
             <h2 style={{ fontSize: 22 }}>{t('latestAnimation')}</h2>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
               {t('latestAnimationSub')}
             </p>
             <button className="primary" onClick={(e) => { e.stopPropagation(); advanceFromPreview() }}>
@@ -156,12 +173,21 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           </div>
         ) : (
           <>
-            <img
-              src={previewFrames[previewIndex]}
-              alt=""
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-            />
-            {previewIndex > 0 && (
+            <AnimatePresence>
+              {!previewIntroShown && (
+                <motion.img
+                  key={`frame-${previewIndex}`}
+                  src={previewFrames[previewIndex]}
+                  alt=""
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              )}
+            </AnimatePresence>
+            {!previewIntroShown && previewIndex > 0 && (
               <motion.img
                 src={previewFrames[previewIndex - 1]}
                 alt=""
@@ -171,25 +197,40 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
               />
             )}
-            {!previewDone ? (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 'calc(32px + env(safe-area-inset-bottom, 0px))',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                  pointerEvents: 'none',
-                }}
-              >
-                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2 }}>
-                  {t('latestAnimation')}
-                </span>
-              </div>
-            ) : (
+            <AnimatePresence>
+              {previewIntroShown && (
+                <motion.div
+                  key="preview-intro-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4 }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 32,
+                    textAlign: 'center',
+                    gap: 14,
+                  }}
+                >
+                  <BrushDeco count={2} />
+                  <span style={{ color: 'var(--accent)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 600 }}>
+                    {t('latestAnimation')}
+                  </span>
+                  <h2 style={{ fontSize: 28, color: 'var(--text)', fontWeight: 700, lineHeight: 1.1, margin: 0, maxWidth: 320 }}>
+                    {t('previewIntroTitle')}
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.5, margin: 0, maxWidth: 320 }}>
+                    {rt(t('previewIntroSub'))}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {!previewIntroShown && previewDone && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

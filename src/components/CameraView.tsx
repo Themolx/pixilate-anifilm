@@ -11,7 +11,6 @@ import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
 import { t } from '../lib/i18n'
 import { getTodayTopic, hasSeenTodayTopic, markTodayTopicSeen } from '../lib/daily'
-import { BrushDeco } from './BrushDeco'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
@@ -54,7 +53,7 @@ export function CameraView() {
 
   useEffect(() => {
     if (!showTopicIntro) return
-    const timer = window.setTimeout(dismissTopic, 4000)
+    const timer = window.setTimeout(dismissTopic, 6500)
     return () => clearTimeout(timer)
   }, [showTopicIntro, dismissTopic])
   const previewIntervalRef = useRef<number | null>(null)
@@ -623,36 +622,35 @@ export function CameraView() {
       <AnimatePresence>
         {showTopicIntro && (
           <motion.div
-            key="topic-intro"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            key="topic-toast"
+            initial={{ opacity: 0, y: -60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -60 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
             onClick={dismissTopic}
             style={{
               position: 'fixed',
-              inset: 0,
+              top: 'calc(12px + env(safe-area-inset-top, 0px))',
+              left: 12,
+              right: 12,
               zIndex: 60,
-              background: 'rgba(255,255,255,0.98)',
+              background: 'rgba(255,255,255,0.97)',
+              borderRadius: 14,
+              padding: '14px 18px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+              cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              padding: 32,
-              textAlign: 'left',
-              cursor: 'pointer',
-              overflow: 'hidden',
-              isolation: 'isolate',
+              gap: 6,
             }}
           >
-            <BrushDeco count={3} />
-            <div style={{ position: 'relative', zIndex: 1, color: 'var(--ok)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
+            <div style={{ color: 'var(--ok)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 600 }}>
               {t('dailyTopicIntro')}
             </div>
-            <div style={{ position: 'relative', zIndex: 1, color: 'var(--text)', fontSize: 36, fontWeight: 700, lineHeight: 1.1, marginBottom: 20, maxWidth: 360 }}>
+            <div style={{ color: 'var(--text)', fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
               {topic}
             </div>
-            <div style={{ position: 'relative', zIndex: 1, color: 'var(--text-muted)', fontSize: 14, maxWidth: 320 }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
               {t('dailyTopicHint')}
             </div>
           </motion.div>

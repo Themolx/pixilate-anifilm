@@ -33,6 +33,8 @@ const dict = {
     loadingPreview: 'Loading preview...',
     previewTapContinue: 'Tap to continue',
     previewAddMore: 'You can **add more frames!**',
+    previewIntroTitle: 'The latest animation',
+    previewIntroSub: "Here are the **last two seconds** others made. You'll add to it next.",
 
     // -------- Onboarding: camera permission (last screen) ----------
     cameraAccess: 'Camera access required',
@@ -89,6 +91,8 @@ const dict = {
     loadingPreview: 'Načítám ukázku...',
     previewTapContinue: 'Klepni pro pokračování',
     previewAddMore: 'Můžeš **přidat další políčka!**',
+    previewIntroTitle: 'Poslední animace',
+    previewIntroSub: 'Za chvíli uvidíš **poslední dvě sekundy** toho, co ostatní nafotili. Pak přidáš svoje.',
 
     // -------- Onboarding: přístup ke kameře (poslední obrazovka) ----------
     cameraAccess: 'Potřebujeme přístup ke kameře',
