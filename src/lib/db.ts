@@ -2,6 +2,28 @@ import { supabase, BUCKET } from './supabase'
 import type { Frame } from './types'
 import { getDeviceId } from './device'
 
+// Retry helper for the capture path. Festival wifi is unreliable; a single
+// transient failure shouldn't lose a user's frame. Caller decides if the
+// operation is idempotent (uploads use upsert; inserts treat 23505 as ok).
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+  baseMs = 800,
+): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (i < attempts - 1) {
+        await new Promise(r => setTimeout(r, baseMs * Math.pow(2, i)))
+      }
+    }
+  }
+  throw lastErr
+}
+
 export async function listFrames(limit = 5000): Promise<Frame[]> {
   const { data, error } = await supabase
     .from('frames')
@@ -57,23 +79,35 @@ export type InsertFrameInput = {
 }
 
 export async function insertFrameRow(i: InsertFrameInput): Promise<Frame> {
-  const { data, error } = await supabase
-    .from('frames')
-    .insert({
-      id:            i.id,
-      storage_path:  i.fullPath,
-      thumb_path:    i.thumbPath,
-      device_id:     getDeviceId(),
-      display_name:  i.displayName,
-      width:         i.capture.width,
-      height:        i.capture.height,
-      bytes:         i.capture.bytes,
-    })
-    .select('*')
-    .single()
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('frames')
+      .insert({
+        id:            i.id,
+        storage_path:  i.fullPath,
+        thumb_path:    i.thumbPath,
+        device_id:     getDeviceId(),
+        display_name:  i.displayName,
+        width:         i.capture.width,
+        height:        i.capture.height,
+        bytes:         i.capture.bytes,
+      })
+      .select('*')
+      .single()
 
-  if (error) throw error
-  return data as Frame
+    if (error) {
+      // 23505 = unique_violation. Means the previous attempt actually succeeded
+      // and we just lost the response; fetch the row instead of erroring.
+      if (error.code === '23505') {
+        const { data: existing, error: fetchErr } = await supabase
+          .from('frames').select('*').eq('id', i.id).single()
+        if (fetchErr) throw fetchErr
+        return existing as Frame
+      }
+      throw error
+    }
+    return data as Frame
+  })
 }
 
 export async function uploadFrameBlobs(
@@ -82,12 +116,16 @@ export async function uploadFrameBlobs(
   full: Blob,
   thumb: Blob,
 ): Promise<void> {
-  const [a, b] = await Promise.all([
-    supabase.storage.from(BUCKET).upload(fullPath,  full,  { contentType: 'image/jpeg', upsert: false }),
-    supabase.storage.from(BUCKET).upload(thumbPath, thumb, { contentType: 'image/jpeg', upsert: false }),
-  ])
-  if (a.error) throw a.error
-  if (b.error) throw b.error
+  // upsert: true makes retries idempotent — same UUID re-uploaded just
+  // overwrites the partial blob from the failed attempt.
+  await withRetry(async () => {
+    const [a, b] = await Promise.all([
+      supabase.storage.from(BUCKET).upload(fullPath,  full,  { contentType: 'image/jpeg', upsert: true }),
+      supabase.storage.from(BUCKET).upload(thumbPath, thumb, { contentType: 'image/jpeg', upsert: true }),
+    ])
+    if (a.error) throw a.error
+    if (b.error) throw b.error
+  })
 }
 
 export type FrameEvent =

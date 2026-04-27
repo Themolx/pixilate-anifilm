@@ -362,6 +362,18 @@ export function CameraView() {
         if (prev) URL.revokeObjectURL(prev.url)
         return { id, url: blobUrl }
       })
+
+      // Flash + visual ack first so the capture feels immediate even on slow wifi.
+      setFlash(true)
+      setTimeout(() => setFlash(false), 140)
+
+      // Upload blobs BEFORE inserting the row. If we inserted first and the
+      // upload failed, every other client would broadcast a row pointing at
+      // missing files (broken thumbs, broken rewind). Now if uploads fail
+      // there's nothing in DB to break the global feed.
+      logger.log('info', 'UPLOAD', `Uploading blobs…`)
+      await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
+
       logger.log('info', 'UPLOAD', `Inserting row: ${id}`)
       await insertFrameRow({
         id,
@@ -370,12 +382,6 @@ export function CameraView() {
         thumbPath,
         displayName: getDisplayName(),
       })
-
-      setFlash(true)
-      setTimeout(() => setFlash(false), 140)
-
-      logger.log('info', 'UPLOAD', `Uploading blobs…`)
-      await uploadFrameBlobs(fullPath, thumbPath, cap.full, cap.thumb)
 
       logger.log('info', 'CAPTURE', 'Success!')
       setThrottleMs(1500)
@@ -396,6 +402,13 @@ export function CameraView() {
       }
 
       logger.log('error', 'ERROR', `Capture failed: ${msg}`)
+
+      // Drop the optimistic preview so the user sees the failure rather than
+      // a phantom success that never made it to the festival timeline.
+      setLocalCapture(prev => {
+        if (prev) URL.revokeObjectURL(prev.url)
+        return null
+      })
 
       if (msg.startsWith('moderation:')) {
         showStatusMessage(msg.slice('moderation:'.length), 'error')
