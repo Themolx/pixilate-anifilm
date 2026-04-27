@@ -28,15 +28,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const deviceId = getDeviceId()
 
-  // Pre-warm the NSFW model in the background so the user's first capture
-  // doesn't sit on a 2-3MB download right when they tap the shutter. By the
-  // time onboarding finishes, the model is usually ready.
-  useEffect(() => {
-    loadModel().catch(err => {
-      logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
-    })
-  }, [])
-
   // Fetch + preload last N frames — SAME source + slice as the main rewind
   // button: all frames (ASC), take the last PREVIEW_FRAMES. listFrames returns
   // ASC by seq; we must slice the TAIL, not reverse the first N.
@@ -289,7 +280,21 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <p className="onboard-tag">{t('tagline')}<br />{t('festival')}</p>
             <p className="onboard-body">{rt(t('intro'))}</p>
             <p className="onboard-body onboard-hint">{rt(t('limitsHint'))}</p>
-            <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
+            <button
+              className="primary"
+              onClick={() => {
+                // Kick off the heavy model + tfjs CDN imports here, NOT on
+                // mount, so the first paint and first click aren't blocked
+                // by JS parsing. Name + preview + camera steps cover the
+                // download window.
+                loadModel().catch(err => {
+                  logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
+                })
+                setStep('name')
+              }}
+            >
+              {t('start')}
+            </button>
           </motion.div>
         )}
 
