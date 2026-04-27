@@ -194,10 +194,12 @@ export function CameraView() {
 
   const lastFrame = frames.length > 0 ? frames[frames.length - 1] : null
   const lastFrameId = lastFrame?.id ?? null
+  // Onion skin uses the thumb (~25KB) — it's drawn at low opacity, full
+  // resolution would be wasted.
   const lastFrameUrl = lastFrame
     ? (localCapture && localCapture.id === lastFrame.id
         ? localCapture.url
-        : framePublicUrl(lastFrame.storage_path))
+        : framePublicUrl(lastFrame.thumb_path))
     : null
 
   const renderOnion = useCallback(() => {
@@ -279,7 +281,7 @@ export function CameraView() {
 
   async function handlePreviewOpen() {
     if (frames.length < 1) return
-    const thumbs = frames.slice(-24).map(f => framePublicUrl(f.storage_path))
+    const thumbs = frames.slice(-24).map(f => framePublicUrl(f.thumb_path))
     setPreviewFrames(thumbs)
     setPreviewIndex(0)
     setShowPreview(true)

@@ -2,28 +2,53 @@
 // if it looks explicit. Fail-open on load/classify errors — staffer watching /admin
 // is the backup defense.
 //
-// Library (nsfwjs/core) and tfjs load from jsdelivr at runtime (not bundled —
-// avoids Vite eagerly shipping all 3 model variants as 30MB of chunks).
-// Model weights are self-hosted under /public/nsfw-model so the festival isn't
-// dependent on a third-party CDN for the hot path.
+// nsfwjs and tfjs are loaded from jsdelivr at runtime so Vite doesn't ship the
+// 3 model variants as 30MB of chunks. Model weights live under /public/nsfw-model.
+//
+// First visit downloads the model (~10MB) and saves it to IndexedDB. Subsequent
+// visits load from IDB so users on slow internet don't re-download every time
+// they open the app.
 
 import type * as NSFWJS from 'nsfwjs'
 
 type LoadFn = typeof NSFWJS.load
 type Model = Awaited<ReturnType<LoadFn>>
+type NSFWJSCtor = new (model: unknown, options?: unknown) => Model
 
 const NSFWJS_CDN = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm'
+const TFJS_CDN = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/+esm'
+const MODEL_KEY = 'indexeddb://pixilate-nsfw-v1'
 
 let modelPromise: Promise<Model> | null = null
 
 export function loadModel(): Promise<Model> {
   if (!modelPromise) {
     modelPromise = (async () => {
-      const mod = (await import(/* @vite-ignore */ NSFWJS_CDN)) as { load: LoadFn }
+      const [nsfwMod, tfMod] = await Promise.all([
+        import(/* @vite-ignore */ NSFWJS_CDN) as Promise<{ load: LoadFn; NSFWJS: NSFWJSCtor }>,
+        import(/* @vite-ignore */ TFJS_CDN) as Promise<typeof import('@tensorflow/tfjs')>,
+      ])
       const base = import.meta.env.BASE_URL.endsWith('/')
         ? import.meta.env.BASE_URL
         : `${import.meta.env.BASE_URL}/`
-      return mod.load(`${base}nsfw-model/model.json`)
+      const networkUrl = `${base}nsfw-model/model.json`
+
+      // Fast path: model already in IndexedDB from a previous visit.
+      try {
+        const cached = await tfMod.loadGraphModel(MODEL_KEY)
+        return new nsfwMod.NSFWJS(cached)
+      } catch {
+        // Not cached or IDB unavailable; fall through to network.
+      }
+
+      // Slow path: load from network, then persist to IDB for next time.
+      const model = await nsfwMod.load(networkUrl)
+      try {
+        await (model.model as unknown as { save: (key: string) => Promise<unknown> }).save(MODEL_KEY)
+      } catch {
+        // Private browsing / quota / IDB blocked — model still works in memory.
+      }
+      return model
     })().catch(err => {
       modelPromise = null
       throw err

@@ -36,7 +36,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       try {
         const rows = await listLatestFrames(PREVIEW_FRAMES)
         if (!alive) return
-        const urls = rows.map(f => framePublicUrl(f.storage_path))
+        // Use thumbs (~25KB each) instead of fulls (~300KB) for the preview.
+        // Saves ~7MB egress per first-time user.
+        const urls = rows.map(f => framePublicUrl(f.thumb_path))
 
         if (urls.length < 3) {
           setPreviewFrames([])
