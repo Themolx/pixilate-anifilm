@@ -43,6 +43,7 @@ export function CameraView() {
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
   const [showGrid, setShowGrid] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [modelReady, setModelReady] = useState(false)
   const [topic] = useState(() => getTodayTopic())
   const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
 
@@ -116,9 +117,13 @@ export function CameraView() {
   // Init logger + warm up NSFW model
   useEffect(() => {
     logger.log('info', 'SYSTEM', `CameraView started (device: ${getDeviceId()})`)
-    loadModel().catch(err => {
-      logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
-    })
+    loadModel()
+      .then(() => setModelReady(true))
+      .catch(err => {
+        logger.log('warn', 'MODERATION', `Model preload failed: ${err instanceof Error ? err.message : String(err)}`)
+        // Fail-open: still allow captures even if the model never loaded.
+        setModelReady(true)
+      })
   }, [])
 
   const refresh = useCallback(async () => {
@@ -340,6 +345,13 @@ export function CameraView() {
     try {
       const cap = await captureFrame(v, zoom)
       logger.log('info', 'CAPTURE', `Frame captured: ${cap.width}x${cap.height}, ${Math.round(cap.full.size / 1024)}kB`)
+
+      // First-capture cliff: nsfwjs lib + tfjs + 2.6MB model weights are
+      // probably still in flight. Tell the user something is happening so
+      // they don't think the button is dead.
+      if (!modelReady) {
+        showStatusMessage(t('preparingFilter'), 'info')
+      }
 
       try {
         const verdict = await classifyBlob(cap.thumb)

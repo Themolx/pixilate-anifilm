@@ -48,6 +48,7 @@ const dict = {
     // -------- Camera view: status messages (shown only on errors) ----------
     capturing: 'Capturing...',
     checking: 'Checking...',
+    preparingFilter: 'Preparing safety filter...',
     saved: 'Saved',
     cameraNotReady: 'Camera not ready',
     slowDown: 'Slow down! (40 frames/min max)',
@@ -119,6 +120,7 @@ const dict = {
     // -------- Kamera: statusové zprávy (jen při chybě) ----------
     capturing: 'Focení...',
     checking: 'Kontroluji...',
+    preparingFilter: 'Připravuji bezpečnostní filtr...',
     saved: 'Uloženo',
     cameraNotReady: 'Kamera není připravená',
     slowDown: 'Pomaleji! :( (max 40 políček/min)',

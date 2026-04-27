@@ -4,6 +4,7 @@ import { markOnboarded, markCameraOk, setDisplayName, getDisplayName } from '../
 import { listLatestFrames } from '../lib/db'
 import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import { loadModel } from '../lib/moderation'
 import { getDeviceId } from '../lib/device'
 import { t } from '../lib/i18n'
 import { rt } from '../lib/format'
@@ -26,6 +27,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const previewIntervalRef = useRef<number | null>(null)
 
   const deviceId = getDeviceId()
+
+  // Pre-warm the NSFW model in the background so the user's first capture
+  // doesn't sit on a 2-3MB download right when they tap the shutter. By the
+  // time onboarding finishes, the model is usually ready.
+  useEffect(() => {
+    loadModel().catch(err => {
+      logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
+    })
+  }, [])
 
   // Fetch + preload last N frames — SAME source + slice as the main rewind
   // button: all frames (ASC), take the last PREVIEW_FRAMES. listFrames returns
