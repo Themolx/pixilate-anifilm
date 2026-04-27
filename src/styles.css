@@ -449,11 +449,20 @@ input, select { font-family: inherit; }
 
 .controls-left, .controls-right {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 6px;
 }
 
-.controls-left { justify-content: flex-start; }
-.controls-right { justify-content: flex-end; }
+.controls-left { justify-self: flex-start; }
+.controls-right { justify-self: flex-end; }
+
+.control-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
 
 .controls-group {
   display: flex;

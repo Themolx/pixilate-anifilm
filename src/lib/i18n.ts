@@ -68,6 +68,19 @@ const dict = {
     // -------- Instagram follow ----------
     followUs: 'Follow',
     instagramHandle: '@anifilmpixilace',
+
+    // -------- Camera bottom-bar labels ----------
+    labelLast2s: 'Last 2s',
+    labelCamera: 'Camera',
+
+    // -------- Info modal (top-right (i) button) ----------
+    infoTitle: 'How it works',
+    infoBody1: 'Pixilate is **one shared stop-motion animation** for the whole festival.',
+    infoBody2: 'Tap the big button to add a frame. The faint **onion skin** shows the previous frame so you can move things just a little between captures.',
+    infoBody3: 'Tap **Last 2s** in the corner to rewind. Everything everyone makes goes into the festival timeline.',
+    infoFooter: 'Made for Anifilm 2026.',
+    infoFramesSoFar: 'frames so far',
+    infoClose: 'Got it',
   },
 
   cs: {
@@ -126,6 +139,19 @@ const dict = {
     // -------- Instagram ----------
     followUs: 'Sleduj',
     instagramHandle: '@anifilmpixilace',
+
+    // -------- Popisky tlačítek na hlavní obrazovce ----------
+    labelLast2s: 'Poslední 2s',
+    labelCamera: 'Kamera',
+
+    // -------- Info modal (tlačítko (i) v pravém horním rohu) ----------
+    infoTitle: 'Jak to funguje',
+    infoBody1: 'Pixilate je **jedna sdílená stop-motion animace** pro celý festival.',
+    infoBody2: 'Klepni na velké tlačítko a přidáš políčko. Slabý **onion skin** ukazuje předchozí frame, takže mezi snímky můžeš věci jen kousek pohnout.',
+    infoBody3: 'V rohu klepni na **Poslední 2s** pro přetočení dozadu. Všechno, co kdo nafotí, jde do festivalové animace.',
+    infoFooter: 'Vyrobeno pro Anifilm 2026.',
+    infoFramesSoFar: 'políček zatím',
+    infoClose: 'Beru',
   },
 } as const
 

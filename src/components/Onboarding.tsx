@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { markOnboarded, markCameraOk, setDisplayName, getDisplayName } from '../lib/onboarding'
-import { listFrames } from '../lib/db'
+import { listLatestFrames } from '../lib/db'
 import { framePublicUrl } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { getDeviceId } from '../lib/device'
@@ -34,10 +34,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     let alive = true
     ;(async () => {
       try {
-        const rows = await listFrames()
+        const rows = await listLatestFrames(PREVIEW_FRAMES)
         if (!alive) return
-        const tail = rows.slice(-PREVIEW_FRAMES)
-        const urls = tail.map(f => framePublicUrl(f.storage_path))
+        const urls = rows.map(f => framePublicUrl(f.storage_path))
 
         if (urls.length < 3) {
           setPreviewFrames([])
@@ -279,16 +278,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <p className="onboard-body">{rt(t('intro'))}</p>
             <p className="onboard-body onboard-hint">{rt(t('limitsHint'))}</p>
             <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
-            <a
-              className="onboard-ig"
-              href="https://instagram.com/anifilmpixilace"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-            >
-              <span className="onboard-ig-label">{t('followUs')}</span>
-              <span className="onboard-ig-handle">{t('instagramHandle')}</span>
-            </a>
           </motion.div>
         )}
 

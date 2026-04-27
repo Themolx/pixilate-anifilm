@@ -14,6 +14,29 @@ export async function listFrames(limit = 5000): Promise<Frame[]> {
   return (data ?? []) as Frame[]
 }
 
+// Latest N frames in ascending seq order. Used by CameraView and the
+// onboarding preview so neither has to download the entire festival.
+export async function listLatestFrames(n = 50): Promise<Frame[]> {
+  const { data, error } = await supabase
+    .from('frames')
+    .select('*')
+    .is('deleted_at', null)
+    .order('seq', { ascending: false })
+    .limit(n)
+
+  if (error) throw error
+  return ((data ?? []) as Frame[]).slice().reverse()
+}
+
+export async function countFrames(): Promise<number> {
+  const { count, error } = await supabase
+    .from('frames')
+    .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
+  if (error) throw error
+  return count ?? 0
+}
+
 export type FramePaths = { id: string; fullPath: string; thumbPath: string }
 
 export function buildFramePaths(): FramePaths {

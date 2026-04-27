@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Frame } from '../lib/types'
-import { buildFramePaths, insertFrameRow, listFrames, subscribeFrames, uploadFrameBlobs } from '../lib/db'
+import { buildFramePaths, countFrames, insertFrameRow, listLatestFrames, subscribeFrames, uploadFrameBlobs } from '../lib/db'
 import { captureFrame } from '../lib/capture'
 import { classifyBlob, loadModel } from '../lib/moderation'
 import { framePublicUrl } from '../lib/supabase'
@@ -11,18 +10,23 @@ import { getDeviceId } from '../lib/device'
 import { logger } from '../lib/logger'
 import { t } from '../lib/i18n'
 import { getTodayTopic, hasSeenTodayTopic, markTodayTopicSeen } from '../lib/daily'
+import { rt } from '../lib/format'
 
 const POLL_FALLBACK_MS = 10_000
 const POLL_INTERVAL_MS = 10_000
 const PREVIEW_FPS = 6
+// Cap how many frames we keep in memory. We only need the last ~24 for the
+// rewind preview and the very last one for the onion skin. Loading the entire
+// festival timeline up front froze the app on slow connections.
+const FRAME_BUFFER = 50
 
 export function CameraView() {
-  const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
   const [frames, setFrames] = useState<Frame[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [cameraReady, setCameraReady] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
@@ -38,6 +42,7 @@ export function CameraView() {
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const [localCapture, setLocalCapture] = useState<{ id: string; url: string } | null>(null)
   const [showGrid, setShowGrid] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
   const [topic] = useState(() => getTodayTopic())
   const [showTopicIntro, setShowTopicIntro] = useState(() => !hasSeenTodayTopic())
 
@@ -118,8 +123,12 @@ export function CameraView() {
 
   const refresh = useCallback(async () => {
     try {
-      const rows = await listFrames()
+      const [rows, count] = await Promise.all([
+        listLatestFrames(FRAME_BUFFER),
+        countFrames(),
+      ])
       setFrames(rows)
+      setTotalCount(count)
     } catch (err) {
       logger.log('error', 'ERROR', `Refresh failed: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -141,10 +150,16 @@ export function CameraView() {
       setFrames(prev => {
         if (ev.type === 'INSERT') {
           if (prev.some(f => f.id === ev.frame.id)) return prev
-          return [...prev, ev.frame].sort((a, b) => a.seq - b.seq)
+          const merged = [...prev, ev.frame].sort((a, b) => a.seq - b.seq)
+          return merged.slice(-FRAME_BUFFER)
         }
         return prev.map(f => (f.id === ev.frame.id ? ev.frame : f)).filter(f => !f.deleted_at)
       })
+      if (ev.type === 'INSERT') {
+        setTotalCount(c => c + 1)
+      } else if (ev.frame.deleted_at) {
+        setTotalCount(c => Math.max(0, c - 1))
+      }
     })
 
     fallbackTimer = window.setTimeout(() => {
@@ -469,30 +484,37 @@ export function CameraView() {
           <span style={{ fontWeight: 600 }}>{topic}</span>
         </button>
 
-        {/* Frame counter at top — tap to view the whole animation */}
+        {/* Info button at top-right — opens explanation modal */}
         <button
-          onClick={() => navigate('/full')}
-          title="View the whole animation"
+          onClick={() => setShowInfo(true)}
+          title={t('infoTitle')}
+          aria-label={t('infoTitle')}
           style={{
             position: 'absolute',
             top: 16,
             right: 16,
-            padding: '5px 10px',
+            width: 32,
+            height: 32,
+            padding: 0,
             borderRadius: 999,
             background: 'rgba(0,0,0,0.35)',
             border: '1px solid rgba(255,255,255,0.15)',
             color: '#fff',
-            fontSize: 12,
-            fontFamily: 'monospace',
+            fontSize: 16,
             fontWeight: 600,
-            letterSpacing: 0.5,
+            fontFamily: 'serif',
+            fontStyle: 'italic',
             backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(6px)',
             cursor: 'pointer',
             zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
           }}
         >
-          ▶ {String(frames.length).padStart(3, '0')}
+          i
         </button>
 
         {flash && <div className="capture-flash" />}
@@ -540,16 +562,14 @@ export function CameraView() {
             className="preview-btn"
             onClick={handlePreviewOpen}
             disabled={frames.length === 0}
-            title="Rewind last 2 seconds"
-            aria-label="Rewind 2s"
+            title={t('labelLast2s')}
+            aria-label={t('labelLast2s')}
           >
-            <span className="rewind-label">2s</span>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <rect x="4" y="6" width="2" height="12" rx="0.5" />
-              <polygon points="14,6 14,18 7,12" />
-              <polygon points="22,6 22,18 15,12" />
+              <polygon points="6,4 6,20 20,12" />
             </svg>
           </button>
+          <span className="control-label">{t('labelLast2s')}</span>
         </div>
 
         <button
@@ -563,8 +583,8 @@ export function CameraView() {
           <button
             className="flip-btn"
             onClick={handleFlipCamera}
-            title={facingMode === 'environment' ? 'Switch to selfie' : 'Switch to rear'}
-            aria-label="Flip camera"
+            title={t('labelCamera')}
+            aria-label={t('labelCamera')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 12a9 9 0 0 1 15.3-6.36L21 8" />
@@ -573,6 +593,7 @@ export function CameraView() {
               <polyline points="3 21 3 16 8 16" />
             </svg>
           </button>
+          <span className="control-label">{t('labelCamera')}</span>
         </div>
       </div>
       </div>
@@ -653,6 +674,64 @@ export function CameraView() {
             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
               {t('dailyTopicHint')}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div
+            key="info-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setShowInfo(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 16, cursor: 'pointer' }}
+          >
+            <motion.div
+              key="info-modal-card"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 420, background: 'var(--bg)', borderRadius: 16, padding: '24px 22px calc(20px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 14, cursor: 'default', boxShadow: '0 -10px 40px rgba(0,0,0,0.3)' }}
+            >
+              <h2 style={{ margin: 0, fontSize: 22, color: 'var(--text)', fontWeight: 700 }}>
+                {t('infoTitle')}
+              </h2>
+              <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.55 }}>
+                {rt(t('infoBody1'))}
+              </p>
+              <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.55 }}>
+                {rt(t('infoBody2'))}
+              </p>
+              <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.55 }}>
+                {rt(t('infoBody3'))}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                  {totalCount}
+                </span>
+                <span>{t('infoFramesSoFar')}</span>
+              </div>
+              <a
+                href="https://instagram.com/anifilmpixilace"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ alignSelf: 'flex-start', marginTop: 4, display: 'inline-flex', alignItems: 'baseline', gap: 8, padding: '10px 14px', borderRadius: 999, background: 'var(--bg-raised)', color: 'var(--text)', textDecoration: 'none', fontSize: 13 }}
+              >
+                <span style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>{t('followUs')}</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{t('instagramHandle')}</span>
+              </a>
+              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+                {t('infoFooter')}
+              </div>
+              <button className="primary" style={{ marginTop: 6 }} onClick={() => setShowInfo(false)}>
+                {t('infoClose')}
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
