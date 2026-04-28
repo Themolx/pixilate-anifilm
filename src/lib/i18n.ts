@@ -109,8 +109,8 @@ const dict = {
     previewIntroSub: 'Za chvíli uvidíš **poslední dvě sekundy** toho, co ostatní udělali!!.',
 
     // -------- Onboarding: přístup ke kameře (poslední obrazovka) ----------
-    cameraAccess: 'Potřebujeme přístup ke kameře',
-    cameraAccessBody: 'Fotky jdou do sdílené festivalové animace.',
+    cameraAccess: 'Potřebujeme práva na kameru',
+    cameraAccessBody: 'Fotky jdou do sdílené festivalové animace. ok?',
     publicNotice: '**Fotky jsou veřejné**, zobrazí se se tvým jménem a zůstávají ve festivalové animaci.',
     cameraDenied: 'Nepodařilo se otevřít kameru.',
     cameraHint: ' ',
@@ -130,7 +130,7 @@ const dict = {
     // -------- Denní téma ----------
     dailyTopicLabel: 'Dnešní téma',
     dailyTopicIntro: 'Dnešní téma',
-    dailyTopicHint: 'Nepovinné.',
+    dailyTopicHint: 'ale je to na tobě!',
     dailyTopicGotIt: 'Juchů',
 
     // -------- Zámek na výšku (když je mobil natočen na šířku) ----------
@@ -149,8 +149,8 @@ const dict = {
     // -------- Info modal (tlačítko (i) v pravém horním rohu) ----------
     infoTitle: 'Jak to funguje',
     infoBody1: 'Pixilate je **jedna sdílená stop-motion animace** pro celý festival.',
-    infoBody2: 'Klepni na velké tlačítko a přidáš políčko. Slabý **onion skin** ukazuje předchozí frame, takže mezi snímky můžeš věci jen kousek pohnout.',
-    infoBody3: 'V rohu klepni na **Poslední 2s** pro přetočení dozadu. Všechno, co kdo nafotí, jde do festivalové animace.',
+    infoBody2: 'Zkus přidat vlastní framy animace, navaž na kamrády, a nebo začni uplně novou.',
+    infoBody3: 'V rohu klepni na **Poslední 2s** pro přetočení dozadu. Všechno, co kdo nafotí, jde do festivalové animace.  Výsledkem je jedna společná festivalová aniamce!',
     infoFooter: 'Vyrobeno pro Anifilm 2026.',
     infoFramesSoFar: 'políček zatím',
     infoClose: 'Beru',

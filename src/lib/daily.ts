@@ -1,37 +1,23 @@
 import { getLang } from './i18n'
 
-// Simple deterministic rotation: day-of-year indexes into the topic list for
-// the current language. Each day has one topic, same for everyone.
-const TOPICS = {
-  en: [
-    'Motion with your hands',
-    'A loop',
-    'Something small',
-    'Morning light',
-    'A surprise',
-    'Collaboration',
-    'A face',
-    'An object in motion',
-    'Shadow play',
-    'Transformation',
-    'A festival moment',
-    'Someone you met',
-  ],
-  cs: [
-    'Pohyb rukama',
-    'Smyčka',
-    'Něco malého',
-    'Ranní světlo',
-    'Překvapení',
-    'Spolupráce',
-    'Obličej',
-    'Předmět v pohybu',
-    'Stíny',
-    'Proměna',
-    'Festivalový moment',
-    'Někdo, koho jsi potkal',
-  ],
-} as const
+// =============================================================================
+// FESTIVAL TOPICS — Anifilm 2026, 5.–10. dubna 2026.
+// Edit the cs / en strings for each day below. The date keys are matched
+// against the user's local calendar day. Outside the festival window the app
+// falls back to the first day's topic so nothing breaks if someone opens it
+// the day before / after.
+// =============================================================================
+
+type Topic = { date: string; cs: string; en: string }
+
+const TOPICS: Topic[] = [
+  { date: '2026-04-05', cs: 'Pohyb rukama',    en: 'Motion with your hands' },
+  { date: '2026-04-06', cs: 'Smyčka',          en: 'A loop' },
+  { date: '2026-04-07', cs: 'Něco malého',     en: 'Something small' },
+  { date: '2026-04-08', cs: 'Stíny',           en: 'Shadow play' },
+  { date: '2026-04-09', cs: 'Proměna',         en: 'Transformation' },
+  { date: '2026-04-10', cs: 'Festivalový moment', en: 'A festival moment' },
+]
 
 function todayKey(): string {
   const d = new Date()
@@ -41,16 +27,13 @@ function todayKey(): string {
   return `${y}-${m}-${day}`
 }
 
-function dayIndex(): number {
-  const d = new Date()
-  const start = new Date(d.getFullYear(), 0, 0)
-  const diff = d.getTime() - start.getTime()
-  return Math.floor(diff / 86400000)
-}
-
 export function getTodayTopic(): string {
-  const list = TOPICS[getLang()] ?? TOPICS.en
-  return list[dayIndex() % list.length]
+  const lang = getLang()
+  const today = todayKey()
+  const match = TOPICS.find(t => t.date === today)
+  if (match) return match[lang]
+  // Outside the festival window: show the first day so the UI is never empty.
+  return TOPICS[0][lang]
 }
 
 const SEEN_PREFIX = 'pixilate:daily:'
