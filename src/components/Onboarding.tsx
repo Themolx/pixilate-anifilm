@@ -24,6 +24,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [previewReady, setPreviewReady] = useState(false)
   const [previewDone, setPreviewDone] = useState(false)
   const [previewIntroShown, setPreviewIntroShown] = useState(true)
+  const [requestingCamera, setRequestingCamera] = useState(false)
   const previewIntervalRef = useRef<number | null>(null)
 
   const deviceId = getDeviceId()
@@ -37,20 +38,36 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     })
   }, [])
 
-  // Fetch + preload last N frames — SAME source + slice as the main rewind
-  // button: all frames (ASC), take the last PREVIEW_FRAMES. listFrames returns
-  // ASC by seq; we must slice the TAIL, not reverse the first N.
+  // Fetch + preload the latest preview frames. Hard-bounded so a slow Supabase
+  // or a slow image CDN can never wedge a first-time user on the preview step.
+  // Failure modes covered:
+  //   - listLatestFrames hangs   -> 5s race, fall through to "no frames" branch
+  //   - individual thumb stalls  -> 3s per-image race, treated as failed-load
+  //   - whole pipeline takes too long -> 8s overall watchdog flips previewReady
   useEffect(() => {
     let alive = true
+    const watchdog = window.setTimeout(() => {
+      if (!alive) return
+      logger.log('warn', 'SYSTEM', 'Onboarding watchdog: preview taking too long, skipping')
+      setPreviewFrames([])
+      setPreviewReady(true)
+    }, 8000)
+
+    const timeoutPromise = <T,>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>(resolve => window.setTimeout(() => resolve(fallback), ms)),
+      ])
+
     ;(async () => {
       try {
-        const rows = await listLatestFrames(PREVIEW_FRAMES)
+        const rows = await timeoutPromise(listLatestFrames(PREVIEW_FRAMES), 5000, [])
         if (!alive) return
         // Use thumbs (~25KB each) instead of fulls (~300KB) for the preview.
-        // Saves ~7MB egress per first-time user.
         const urls = rows.map(f => framePublicUrl(f.thumb_path))
 
         if (urls.length < 3) {
+          window.clearTimeout(watchdog)
           setPreviewFrames([])
           setPreviewReady(true)
           logger.log('info', 'SYSTEM', `Onboarding: only ${urls.length} frames, skipping preview`)
@@ -58,28 +75,34 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         }
 
         await Promise.all(
-          urls.map(
-            url =>
-              new Promise<void>(resolve => {
-                const img = new Image()
-                img.onload = () => resolve()
-                img.onerror = () => resolve()
-                img.src = url
-              }),
-          ),
+          urls.map(url => timeoutPromise(
+            new Promise<void>(resolve => {
+              const img = new Image()
+              img.onload = () => resolve()
+              img.onerror = () => resolve()
+              img.src = url
+            }),
+            3000,
+            undefined as unknown as void,
+          )),
         )
         if (!alive) return
+        window.clearTimeout(watchdog)
         setPreviewFrames(urls)
         setPreviewReady(true)
         logger.log('info', 'SYSTEM', `Onboarding: ${urls.length} preview frames preloaded`)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         logger.log('error', 'ERROR', `Onboarding preview fetch failed: ${msg}`)
+        window.clearTimeout(watchdog)
         setPreviewFrames([])
         setPreviewReady(true)
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+      window.clearTimeout(watchdog)
+    }
   }, [])
 
   // Hold an intro card for ~1.8s after entering the preview step so the
@@ -130,12 +153,22 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   }
 
   async function requestCamera() {
+    if (requestingCamera) return
+    setRequestingCamera(true)
     setCameraError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
+      // Race against a 15s wall-clock timeout so a stuck getUserMedia
+      // (busy camera, OS-level dialog dismissed weirdly) can't strand the
+      // user on the permission screen with a dead-looking button.
+      const stream: MediaStream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        }),
+        new Promise<MediaStream>((_, reject) =>
+          window.setTimeout(() => reject(new Error('Camera permission timed out')), 15000),
+        ),
+      ])
       stream.getTracks().forEach(t => t.stop())
       markCameraOk()
       logger.log('info', 'SYSTEM', `Camera permission granted (device: ${deviceId})`)
@@ -146,6 +179,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       const msg = err instanceof Error ? err.message : 'Camera access denied'
       setCameraError(msg)
       logger.log('error', 'ERROR', `Camera permission denied: ${msg}`)
+    } finally {
+      setRequestingCamera(false)
     }
   }
 
@@ -345,7 +380,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 <p className="onboard-hint">{t('cameraHint')}</p>
               </motion.div>
             )}
-            <button className="primary" onClick={requestCamera}>
+            <button className="primary" onClick={requestCamera} disabled={requestingCamera}>
               {cameraError ? t('tryAgain') : t('allowCamera')}
             </button>
           </motion.div>
