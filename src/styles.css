@@ -540,12 +540,12 @@ input, select { font-family: inherit; }
   position: absolute;
   inset: 6px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--text);
   transition: all 150ms ease;
 }
 
 .capture-btn:active::after {
-  background: var(--accent-hover);
+  background: var(--text-muted);
   inset: 5px;
 }
 

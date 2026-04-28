@@ -755,7 +755,18 @@ export function CameraView() {
               <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
                 {t('infoFooter')}
               </div>
-              <button className="primary" style={{ marginTop: 6 }} onClick={() => setShowInfo(false)}>
+              <button
+                className="primary"
+                onClick={() => setShowInfo(false)}
+                style={{
+                  marginTop: 12,
+                  width: '100%',
+                  padding: '18px 24px',
+                  fontSize: 17,
+                  fontWeight: 700,
+                  borderRadius: 12,
+                }}
+              >
                 {t('infoClose')}
               </button>
             </motion.div>
