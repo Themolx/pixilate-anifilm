@@ -280,21 +280,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <p className="onboard-tag">{t('tagline')}<br />{t('festival')}</p>
             <p className="onboard-body">{rt(t('intro'))}</p>
             <p className="onboard-body onboard-hint">{rt(t('limitsHint'))}</p>
-            <button
-              className="primary"
-              onClick={() => {
-                // Kick off the heavy model + tfjs CDN imports here, NOT on
-                // mount, so the first paint and first click aren't blocked
-                // by JS parsing. Name + preview + camera steps cover the
-                // download window.
-                loadModel().catch(err => {
-                  logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
-                })
-                setStep('name')
-              }}
-            >
-              {t('start')}
-            </button>
+            <button className="primary" onClick={() => setStep('name')}>{t('start')}</button>
           </motion.div>
         )}
 
@@ -320,7 +306,23 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               maxLength={24}
               autoFocus
             />
-            <button className="primary" onClick={() => setStep('preview')}>{t('continue')}</button>
+            <button
+              className="primary"
+              onClick={() => {
+                // Kick off the heavy model + tfjs CDN imports here. Parsing
+                // ~1MB of JS blocks the main thread for a few seconds, so we
+                // run it during the preview step where the user is just
+                // watching, not interacting. Doing this earlier (on Start /
+                // on Onboarding mount) freezes the name input on fresh
+                // devices that don't already have nsfwjs/tfjs in HTTP cache.
+                loadModel().catch(err => {
+                  logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
+                })
+                setStep('preview')
+              }}
+            >
+              {t('continue')}
+            </button>
           </motion.div>
         )}
 
