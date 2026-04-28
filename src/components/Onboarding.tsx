@@ -28,6 +28,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const deviceId = getDeviceId()
 
+  // Pre-warm the NSFW model in a Web Worker so it's ready by the time the
+  // user reaches their first capture. Off-thread, doesn't block UI on
+  // fresh devices.
+  useEffect(() => {
+    loadModel().catch(err => {
+      logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
+    })
+  }, [])
+
   // Fetch + preload last N frames — SAME source + slice as the main rewind
   // button: all frames (ASC), take the last PREVIEW_FRAMES. listFrames returns
   // ASC by seq; we must slice the TAIL, not reverse the first N.
@@ -306,23 +315,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               maxLength={24}
               autoFocus
             />
-            <button
-              className="primary"
-              onClick={() => {
-                // Kick off the heavy model + tfjs CDN imports here. Parsing
-                // ~1MB of JS blocks the main thread for a few seconds, so we
-                // run it during the preview step where the user is just
-                // watching, not interacting. Doing this earlier (on Start /
-                // on Onboarding mount) freezes the name input on fresh
-                // devices that don't already have nsfwjs/tfjs in HTTP cache.
-                loadModel().catch(err => {
-                  logger.log('warn', 'MODERATION', `Onboarding prewarm failed: ${err instanceof Error ? err.message : String(err)}`)
-                })
-                setStep('preview')
-              }}
-            >
-              {t('continue')}
-            </button>
+            <button className="primary" onClick={() => setStep('preview')}>{t('continue')}</button>
           </motion.div>
         )}
 
