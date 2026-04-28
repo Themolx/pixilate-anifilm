@@ -88,25 +88,25 @@ const dict = {
     // -------- Onboarding: úvodní obrazovka ----------
     tagline: 'PIXILACE! PIXILACE?! PIXILACE!!',
     festival: 'Anifilm 2026.',
-    intro: 'Jedna **sdílená animace** pro celý festival. **Vyfoť frame** a sleduj, jak ostatní přidávají svoje.',
+    intro: 'Jedna **sdílená animace** pro celý festival. **Vyfoť framea nebo víc** a sleduj, jak ostatní přidávají ty svoje!!',
     limitsHint: ' ',
-    start: 'Začít',
+    start: 'ANIFIIILM',
 
     // -------- Onboarding: jméno ----------
-    nameQuestion: 'Jak ti máme říkat?',
-    nameHint: 'Zobrazí se **u políček**, která nafotíš.',
-    nameHintOptional: 'Nepovinné.',
+    nameQuestion: 'animátorksé jméno?',
+    nameHint: 'abychom pak věděli co jsi nafotil',
+    nameHintOptional: 'Nepotřebujem to.',
     namePlaceholder: 'jméno',
-    continue: 'Pokračovat',
+    continue: 'ANIFIIIIIILM',
 
     // -------- Onboarding: ukázka poslední animace ----------
     latestAnimation: 'Poslední 2s',
-    latestAnimationSub: 'Podívej se, co už ostatní nafotili. **Finální projekce bude tady!** "papir"',
-    loadingPreview: 'Načítám ukázku...',
-    previewTapContinue: 'Klepni pro pokračování',
-    previewAddMore: 'Můžeš **přidat další políčka!**',
+    latestAnimationSub: 'Poesdní dvě sekundy, koukej na to!! zkus na to navázat a neb,ne!',
+    loadingPreview: 'Načítám...',
+    previewTapContinue: 'Klikni pro pokračování',
+    previewAddMore: 'Můžeš **přidat další framy!! Klidně milion:)**',
     previewIntroTitle: 'Poslední animace',
-    previewIntroSub: 'Za chvíli uvidíš **poslední dvě sekundy** toho, co ostatní nafotili. Pak přidáš svoje.',
+    previewIntroSub: 'Za chvíli uvidíš **poslední dvě sekundy** toho, co ostatní udělali!!.',
 
     // -------- Onboarding: přístup ke kameře (poslední obrazovka) ----------
     cameraAccess: 'Potřebujeme přístup ke kameře',
