@@ -1,8 +1,12 @@
 // Capture a square (1:1) JPEG + a ~240px-wide thumbnail from a playing <video>.
 // Re-encodes via canvas so EXIF is stripped on the way out.
+//
+// FULL_QUALITY = 0.92 because the festival's stored full frames become the
+// source material for the final film; q=0.82 was leaving compression smear
+// at HD/4K. Thumb stays smaller — it's only for live previews.
 
 const THUMB_WIDTH = 240
-const FULL_QUALITY = 0.82
+const FULL_QUALITY = 0.92
 const THUMB_QUALITY = 0.75
 
 export type Capture = {

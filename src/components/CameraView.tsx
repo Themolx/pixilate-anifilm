@@ -70,8 +70,11 @@ export function CameraView() {
     setCameraReady(false)
     try {
       streamRef.current?.getTracks().forEach(t => t.stop())
+      // Ask for 1920px so the captured 1:1 crop has more pixels for the
+      // final film export. Phones that can't deliver pick the closest
+      // supported resolution automatically.
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 960 } },
+        video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1920 } },
         audio: false,
       })
       streamRef.current = stream

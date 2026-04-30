@@ -7,42 +7,29 @@ import type { Frame } from '../lib/types'
 import { logger } from '../lib/logger'
 
 const FPS = 12
-// Prefetch this many frames ahead of the playhead. Two seconds of buffer
-// covers a single slow request without forcing us to download the whole
-// festival before playback can start.
-const PREFETCH_AHEAD = 24
-// Periodic resync against the DB. Catches anything realtime missed during
-// long-lived sessions; cheap because listAllFrames is paginated.
-const RESYNC_MS = 60_000
+// How many frames must be cached before playback starts. ~2.5s of buffer
+// at 12fps is enough to absorb network jitter without making the user
+// stare at "Loading…" forever.
+const INITIAL_BUFFER = 30
+// Once playback is running, keep this many frames warm ahead of the
+// playhead so live loading rides along without stalling.
+const PREFETCH_AHEAD = 30
 
 export function FullView() {
   const navigate = useNavigate()
   const [frames, setFrames] = useState<Frame[]>([])
   const [idx, setIdx] = useState(0)
   const [hasInitial, setHasInitial] = useState(false)
+  const [bufferReady, setBufferReady] = useState(false)
+  const [bufferLoaded, setBufferLoaded] = useState(0)
   const [showUI, setShowUI] = useState(false)
   const hideTimer = useRef<number | null>(null)
 
-  // Track which frame IDs have actually finished loading their image. The
-  // playhead refuses to advance to a frame that isn't ready yet, so the user
-  // never sees a blank image / black flash even when the network is slower
-  // than the 83ms-per-frame playback budget.
+  // Track which frame URLs we've already kicked off a fetch for, so the
+  // prefetch ring doesn't duplicate work as the playhead advances.
   const startedRef = useRef<Set<string>>(new Set())
-  const [readyIds, setReadyIds] = useState<Set<string>>(new Set())
-  const readyIdsRef = useRef(readyIds)
-  readyIdsRef.current = readyIds
 
-  const markReady = (id: string) => {
-    setReadyIds(prev => {
-      if (prev.has(id)) return prev
-      const next = new Set(prev)
-      next.add(id)
-      return next
-    })
-  }
-
-  // Initial fetch — paginated, no upfront image preload. Playback gates on
-  // readyIds so the loop only advances over frames that have actually loaded.
+  // Initial paginated fetch.
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -61,9 +48,9 @@ export function FullView() {
     return () => { alive = false }
   }, [])
 
-  // Realtime append + soft-delete handling.
+  // Realtime + soft-delete handling.
   useEffect(() => {
-    const unsub = subscribeFrames(ev => {
+    return subscribeFrames(ev => {
       setFrames(prev => {
         if (ev.type === 'INSERT') {
           if (prev.some(f => f.id === ev.frame.id)) return prev
@@ -72,58 +59,67 @@ export function FullView() {
         return prev.map(f => (f.id === ev.frame.id ? ev.frame : f)).filter(f => !f.deleted_at)
       })
     })
-    return unsub
   }, [])
 
-  // Resync watchdog for long-running sessions.
+  // Initial buffer fill: download the first N thumbs upfront so playback
+  // starts smooth. Done once; new frames that stream in later are picked up
+  // by the prefetch ring instead.
   useEffect(() => {
-    if (!hasInitial) return
-    const id = window.setInterval(async () => {
-      try {
-        const rows = await listAllFrames()
-        setFrames(prev => (rows.length === prev.length ? prev : rows))
-      } catch (err) {
-        logger.log('warn', 'SYSTEM', `FullView resync failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-    }, RESYNC_MS)
-    return () => clearInterval(id)
-  }, [hasInitial])
+    if (!hasInitial || bufferReady || frames.length === 0) return
+    const target = Math.min(INITIAL_BUFFER, frames.length)
+    let loaded = 0
+    let cancelled = false
 
-  // Playhead loop — advances only when the next frame is ready. If the next
-  // image hasn't loaded yet we hold on the current frame, so playback slows
-  // gracefully on bad networks instead of flashing black.
+    const tick = () => {
+      if (cancelled) return
+      loaded++
+      setBufferLoaded(loaded)
+      if (loaded >= target) {
+        setBufferReady(true)
+        logger.log('info', 'SYSTEM', `FullView: buffer ready (${loaded}/${target})`)
+      }
+    }
+
+    for (let i = 0; i < target; i++) {
+      const frame = frames[i]
+      if (!frame) { tick(); continue }
+      if (startedRef.current.has(frame.id)) { tick(); continue }
+      startedRef.current.add(frame.id)
+      const img = new Image()
+      img.onload = tick
+      img.onerror = tick
+      img.src = framePublicUrl(frame.thumb_path)
+    }
+
+    // Safety net: if all frames in the buffer were already started before
+    // (cached from an earlier mount), the loop above never advanced.
+    if (target === 0) setBufferReady(true)
+
+    return () => { cancelled = true }
+  }, [hasInitial, frames, bufferReady])
+
+  // Playback loop: fixed FPS, runs only after the initial buffer is ready.
+  // No per-frame gating — the prefetch ring keeps later frames warm so a
+  // single missed cache hit briefly flickers but doesn't change pace.
   useEffect(() => {
-    if (!hasInitial || frames.length === 0) return
+    if (!bufferReady || frames.length === 0) return
     const interval = window.setInterval(() => {
-      setIdx(prev => {
-        const next = (prev + 1) % frames.length
-        const nextFrame = frames[next]
-        if (nextFrame && readyIdsRef.current.has(nextFrame.id)) return next
-        return prev
-      })
+      setIdx(prev => (prev + 1) % frames.length)
     }, Math.round(1000 / FPS))
     return () => clearInterval(interval)
-  }, [hasInitial, frames])
+  }, [bufferReady, frames.length])
 
-  // Prefetch ring: kick off Image() loads for the next PREFETCH_AHEAD frames.
-  // We use thumbs (~25KB) so even a slow connection keeps up with 12fps.
-  // startedRef dedupes so we don't refetch the same frame on every tick.
+  // Prefetch ring: keep PREFETCH_AHEAD frames warm in the image cache.
   useEffect(() => {
-    if (!hasInitial || frames.length === 0) return
+    if (!bufferReady || frames.length === 0) return
     for (let i = 0; i < PREFETCH_AHEAD; i++) {
       const target = frames[(idx + i) % frames.length]
       if (!target || startedRef.current.has(target.id)) continue
       startedRef.current.add(target.id)
       const img = new Image()
-      const id = target.id
-      img.onload = () => markReady(id)
-      // Treat errors as "ready" so a single missing thumb can't permanently
-      // stall the playhead. Worst case the user sees a brief broken-image
-      // tick when that index comes around.
-      img.onerror = () => markReady(id)
       img.src = framePublicUrl(target.thumb_path)
     }
-  }, [idx, frames, hasInitial])
+  }, [idx, frames, bufferReady])
 
   const pokeUI = () => {
     setShowUI(true)
@@ -136,7 +132,8 @@ export function FullView() {
   }, [])
 
   const current = frames[idx]
-  const currentReady = current && readyIds.has(current.id)
+  const showBufferLabel = !bufferReady
+  const target = Math.min(INITIAL_BUFFER, frames.length)
 
   return (
     <div
@@ -153,18 +150,24 @@ export function FullView() {
       }}
     >
       {!hasInitial && (
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
           Loading…
         </div>
       )}
 
       {hasInitial && frames.length === 0 && (
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
           No frames yet
         </div>
       )}
 
-      {hasInitial && current && currentReady && (
+      {hasInitial && frames.length > 0 && showBufferLabel && (
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, fontFamily: 'monospace' }}>
+          Buffering {bufferLoaded} / {target}
+        </div>
+      )}
+
+      {bufferReady && current && (
         <img
           key={current.id}
           src={framePublicUrl(current.thumb_path)}
@@ -173,13 +176,12 @@ export function FullView() {
             maxWidth: '100%',
             maxHeight: '100%',
             objectFit: 'contain',
-            imageRendering: 'auto',
           }}
         />
       )}
 
-      {/* Always-visible overlay: frame counter (left) + author name (right) */}
-      {hasInitial && current && (
+      {/* Always-visible bottom strip: counter (left), author (right). */}
+      {bufferReady && current && (
         <div
           style={{
             position: 'absolute',
@@ -197,7 +199,7 @@ export function FullView() {
           }}
         >
           <span>{String(idx + 1).padStart(3, '0')} / {String(frames.length).padStart(3, '0')}</span>
-          <span style={{ fontFamily: 'inherit', opacity: 0.85 }}>{current.display_name || 'Anonymous'}</span>
+          <span style={{ opacity: 0.85 }}>{current.display_name || 'Anonymous'}</span>
         </div>
       )}
 
@@ -211,18 +213,10 @@ export function FullView() {
             style={{
               position: 'absolute',
               top: 16,
-              left: 16,
               right: 16,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              color: '#fff',
-              fontSize: 13,
-              fontFamily: 'monospace',
               pointerEvents: 'none',
             }}
           >
-            <div />
             <button
               onClick={(e) => { e.stopPropagation(); navigate('/') }}
               style={{
