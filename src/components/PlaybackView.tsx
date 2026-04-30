@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { listFrames, subscribeFrames } from '../lib/db'
+import { listAllFrames, subscribeFrames } from '../lib/db'
 import { framePublicUrl } from '../lib/supabase'
 import type { Frame } from '../lib/types'
 import { Timeline } from './Timeline'
@@ -21,9 +21,11 @@ export function PlaybackView() {
     let live = true
     ;(async () => {
       try {
-        const f = await listFrames()
+        const f = await listAllFrames()
         if (!live) return
         setFrames(f)
+      } catch (err) {
+        logger.log('error', 'ERROR', `PlaybackView fetch failed: ${err instanceof Error ? err.message : String(err)}`)
       } finally {
         if (live) setLoading(false)
       }

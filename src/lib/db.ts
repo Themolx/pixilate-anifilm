@@ -36,6 +36,31 @@ export async function listFrames(limit = 5000): Promise<Frame[]> {
   return (data ?? []) as Frame[]
 }
 
+// Paginated full fetch for the festival-TV / full-playback views. Supabase
+// caps a single request at 1000 rows, so we walk the table in pages until
+// exhausted. Hard safety stop at 100k frames so a runaway can't chew through
+// memory if something goes wrong.
+export async function listAllFrames(): Promise<Frame[]> {
+  const PAGE = 1000
+  const HARD_STOP = 100_000
+  const all: Frame[] = []
+  let offset = 0
+  while (offset < HARD_STOP) {
+    const { data, error } = await supabase
+      .from('frames')
+      .select('*')
+      .is('deleted_at', null)
+      .order('seq', { ascending: true })
+      .range(offset, offset + PAGE - 1)
+    if (error) throw error
+    const rows = (data ?? []) as Frame[]
+    all.push(...rows)
+    if (rows.length < PAGE) break
+    offset += PAGE
+  }
+  return all
+}
+
 // Latest N frames in ascending seq order. Used by CameraView and the
 // onboarding preview so neither has to download the entire festival.
 export async function listLatestFrames(n = 50): Promise<Frame[]> {
