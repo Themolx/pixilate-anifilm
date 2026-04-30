@@ -478,6 +478,35 @@ export function CameraView() {
           </svg>
         )}
 
+        {/* Frame count + last-author hint above the onion. Subtle, monospace. */}
+        {lastFrame && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 10,
+              pointerEvents: 'none',
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'rgba(0,0,0,0.32)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              letterSpacing: 0.5,
+              maxWidth: 'calc(100% - 140px)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {String(totalCount).padStart(3, '0')} · {lastFrame.display_name || 'Anonymous'}
+          </div>
+        )}
+
         {/* Daily topic pill (tap to re-open the modal) */}
         <button
           onClick={() => setShowTopicIntro(true)}

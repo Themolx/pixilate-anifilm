@@ -458,9 +458,8 @@ input, select { font-family: inherit; }
 .controls-right { justify-self: flex-end; }
 
 .control-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
   color: var(--text-muted);
 }
 
