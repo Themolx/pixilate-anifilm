@@ -7,3 +7,4 @@ dist
 .env.*.local
 
 supabase/.temp/
+frames-export/

@@ -27,7 +27,7 @@ if (!url || !key) {
   process.exit(1)
 }
 
-const BUCKET = 'frames'
+const BUCKET = 'pixilate-frames'
 const OUT = path.resolve('./frames-export')
 const PARALLELISM = 8
 // "thumb" downloads the small ~25KB previews, "full" downloads the
