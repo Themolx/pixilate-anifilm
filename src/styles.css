@@ -463,6 +463,33 @@ input, select { font-family: inherit; }
   color: var(--text-muted);
 }
 
+.onion-credit {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.onion-credit-count {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.onion-credit-sep {
+  opacity: 0.5;
+}
+
+.onion-credit-name {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .controls-group {
   display: flex;
   align-items: center;
