@@ -554,9 +554,10 @@ export function CameraView() {
       <div className="bottom-panel">
       {lastFrame && (
         <div className="onion-credit">
+          <span className="onion-credit-line">
+            {t('lastFrameBy')} <span className="onion-credit-name">{lastFrame.display_name || 'Anonymous'}</span>
+          </span>
           <span className="onion-credit-count">{String(totalCount).padStart(3, '0')}</span>
-          <span className="onion-credit-sep">·</span>
-          <span className="onion-credit-name">{lastFrame.display_name || 'Anonymous'}</span>
         </div>
       )}
       <motion.div

@@ -319,6 +319,7 @@ input, select { font-family: inherit; }
   flex-direction: column;
   justify-content: center;
   background: var(--bg);
+  position: relative;
 }
 
 /* ---------- onion control bar (above main controls, white UI) ---------- */
@@ -464,30 +465,35 @@ input, select { font-family: inherit; }
 }
 
 .onion-credit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 0 16px 6px;
-  font-size: 12px;
+  padding: 6px 16px 4px;
+  font-size: 11px;
   color: var(--text-muted);
+}
+
+.onion-credit-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 75%;
+}
+
+.onion-credit-name {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .onion-credit-count {
   font-family: monospace;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.onion-credit-sep {
-  opacity: 0.5;
-}
-
-.onion-credit-name {
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 .controls-group {

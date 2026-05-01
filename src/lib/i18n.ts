@@ -73,6 +73,7 @@ const dict = {
         // -------- Camera bottom-bar labels ----------
         labelLast2s: 'Last 2s',
         labelCamera: 'Camera',
+        lastFrameBy: 'last frame by',
 
         // -------- Info modal (top-right (i) button) ----------
         infoTitle: 'How it works',
@@ -145,6 +146,7 @@ const dict = {
         // -------- Popisky tlačítek na hlavní obrazovce ----------
         labelLast2s: 'Poslední 2s',
         labelCamera: 'Kamera',
+        lastFrameBy: 'poslední frame od',
 
         // -------- Info modal (tlačítko (i) v pravém horním rohu) ----------
         infoTitle: 'Jak to funguje',
