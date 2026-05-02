@@ -18,14 +18,14 @@ const dict = {
         festival: 'Anifilm 2026.',
         intro: 'One **shared animation** for the whole festival. **Add a frame** and watch it live as others add theirs.',
         limitsHint: ' ',
-        start: 'Start',
+        start: 'Anifilm!',
 
         // -------- Onboarding: name screen ----------
         nameQuestion: 'What should we call you?',
         nameHint: 'Shown **next to frames** you capture.',
         nameHintOptional: 'Optional.',
         namePlaceholder: 'Your name',
-        continue: 'Continue',
+        continue: 'Anifiiilm!',
 
         // -------- Onboarding: latest-animation preview ----------
         latestAnimation: 'The latest animation',
@@ -80,7 +80,7 @@ const dict = {
         infoBody1: 'Pixilate is **one shared stop-motion animation** for the whole festival.',
         infoBody2: 'Press a button to take a frame. The **onion skin overlay** shows the previous frame, use it to match objects or animate movements.',
         infoBody3: 'Tap **Last 2s** in the corner to rewind. See what others did and try to expand it!',
-        infoFooter: 'Made for Anifilm 2026.',
+        infoFooter: 'Made by ptacek & jamiie',
         infoFramesSoFar: 'frames so far',
         infoClose: 'Got it',
     },
@@ -94,7 +94,7 @@ const dict = {
         start: 'ANIFIIILM',
 
         // -------- Onboarding: jméno ----------
-        nameQuestion: 'animátorksé jméno?',
+        nameQuestion: 'animátorské jméno?',
         nameHint: 'abychom pak věděli co jste nafotili',
         nameHintOptional: 'Nepotřebujem to.',
         namePlaceholder: 'jméno',
@@ -151,11 +151,11 @@ const dict = {
         // -------- Info modal (tlačítko (i) v pravém horním rohu) ----------
         infoTitle: 'Jak to funguje',
         infoBody1: 'Pixilate je **jedna sdílená stop-motion animace** pro celý festival.',
-        infoBody2: 'Zkus přidat vlastní framy animace, navaž na kamrády, a nebo začni uplně novou.',
+        infoBody2: 'Zkus přidat vlastní framy animace, navaž na kamarády, a nebo začni uplně novou.',
         infoBody3: 'V rohu klepni na **Poslední 2s** pro přetočení dozadu. Všechno, co kdo nafotí, jde do festivalové animace.  Celou animaci si pak spolu pustíme!',
-        infoFooter: 'Vyrobeno pro Anifilm 2026.',
+        infoFooter: 'udělali ptacek & jamiie',
         infoFramesSoFar: 'políček zatím',
-        infoClose: 'Beru',
+        infoClose: 'Anifiiiiiilm',
     },
 } as const
 
