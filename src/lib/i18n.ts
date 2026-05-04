@@ -39,7 +39,7 @@ const dict = {
         // -------- Onboarding: camera permission (last screen) ----------
         cameraAccess: 'Camera access required :0',
         cameraAccessBody: 'Pixilate needs your camera to capture frames. Photos go into the shared festival timeline.',
-        publicNotice: '**Photos are public**, shown with your name, and stay they in the festival timeline.',
+        publicNotice: '**Photos are public**, shown with your name, and they stayin the festival timeline.',
         cameraDenied: "Couldn't access the camera.",
         cameraHint: 'iOS: Settings > Safari > Camera > Allow. Desktop: click the camera icon in the address bar and allow.',
         tryAgain: 'Try again',
@@ -68,12 +68,17 @@ const dict = {
 
         // -------- Instagram follow ----------
         followUs: 'Follow',
-        instagramHandle: '@anifilmpixilace',
+       instagramHandle: '@anifilmpixilace',
 
         // -------- Camera bottom-bar labels ----------
         labelLast2s: 'Last 2s',
         labelCamera: 'Camera',
         lastFrameBy: 'last frame by',
+
+        // -------- Deadline screen (after 10.5. 15:00) ----------
+        deadlineTitle: 'That is a wrap.',
+        deadlineBody: 'Pixilate at Anifilm 2026 closed on **10.5. at 15:00**. Thanks for being part of the animation!',
+        deadlineFooter: 'See you at the screening.',
 
         // -------- Info modal (top-right (i) button) ----------
         infoTitle: 'How it works',
@@ -147,6 +152,11 @@ const dict = {
         labelLast2s: 'Poslední 2s',
         labelCamera: 'Kamera',
         lastFrameBy: 'poslední frame od',
+
+        // -------- Konec festivalu (po 10.5. 15:00) ----------
+        deadlineTitle: 'A je to.',
+        deadlineBody: 'Pixilate na Anifilm 2026 skončil **10.5. v 15:00**. Díky, že jsi byl součástí animace!',
+        deadlineFooter: 'Uvidíme se na projekci.',
 
         // -------- Info modal (tlačítko (i) v pravém horním rohu) ----------
         infoTitle: 'Jak to funguje',

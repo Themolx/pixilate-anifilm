@@ -1,7 +1,7 @@
 import { getLang } from './i18n'
 
 // =============================================================================
-// FESTIVAL TOPICS — Anifilm 2026, 5.–10. dubna 2026.
+// FESTIVAL TOPICS — Anifilm 2026, 5.–10. května 2026.
 // Edit the cs / en strings for each day below. The date keys are matched
 // against the user's local calendar day. Outside the festival window the app
 // falls back to the first day's topic so nothing breaks if someone opens it
@@ -11,12 +11,12 @@ import { getLang } from './i18n'
 type Topic = { date: string; cs: string; en: string }
 
 const TOPICS: Topic[] = [
-  { date: '2026-04-05', cs: 'Pohyb rukama',    en: 'Motion with your hands' },
-  { date: '2026-04-06', cs: 'Smyčka',          en: 'A loop' },
-  { date: '2026-04-07', cs: 'Něco malého',     en: 'Something small' },
-  { date: '2026-04-08', cs: 'Stíny',           en: 'Shadow play' },
-  { date: '2026-04-09', cs: 'Proměna',         en: 'Transformation' },
-  { date: '2026-04-10', cs: 'Festivalový moment', en: 'A festival moment' },
+  { date: '2026-05-05', cs: 'Pohyb rukama',    en: 'Motion with your hands' },
+  { date: '2026-05-06', cs: 'Smyčka',          en: 'A loop' },
+  { date: '2026-05-07', cs: 'Něco malého',     en: 'Something small' },
+  { date: '2026-05-08', cs: 'Stíny',           en: 'Shadow play' },
+  { date: '2026-05-09', cs: 'Proměna',         en: 'Transformation' },
+  { date: '2026-05-10', cs: 'Festivalový moment', en: 'A festival moment' },
 ]
 
 function todayKey(): string {
