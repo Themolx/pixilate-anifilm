@@ -9,10 +9,13 @@ export type ModerationResult = {
   scores: Record<string, number>
 }
 
-const PORN_THRESHOLD = 0.5
-const HENTAI_THRESHOLD = 0.5
-const COMBINED_THRESHOLD = 0.6
-const SEXY_THRESHOLD = 0.85
+// Festival mode: nsfwjs is over-eager on close-ups, body parts, and
+// stop-motion props. We only want to catch obvious abuse here; the admin
+// in /admin/reports is the real moderation surface.
+const PORN_THRESHOLD = 0.92
+const HENTAI_THRESHOLD = 0.92
+const COMBINED_THRESHOLD = 0.95
+const SEXY_THRESHOLD = 0.97
 
 const baseUrl = import.meta.env.BASE_URL.endsWith('/')
   ? import.meta.env.BASE_URL
