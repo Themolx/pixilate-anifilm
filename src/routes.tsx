@@ -45,6 +45,7 @@ function RoutesContent() {
         <Route path="/play"            element={<PlaybackView />} />
         <Route path="/full"            element={<FullView />} />
         <Route path="/logs"            element={<LogsView />} />
+        <Route path="/end"             element={<DeadlineView />} />
         <Route path="/admin"           element={<AdminGate><AdminFrames /></AdminGate>} />
         <Route path="/admin/reports"   element={<AdminGate><AdminReports /></AdminGate>} />
         <Route path="*"                element={<Navigate to="/" replace />} />

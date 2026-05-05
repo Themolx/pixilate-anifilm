@@ -11,12 +11,12 @@ import { getLang } from './i18n'
 type Topic = { date: string; cs: string; en: string }
 
 const TOPICS: Topic[] = [
-  { date: '2026-05-05', cs: 'Pohyb rukama',    en: 'Motion with your hands' },
-  { date: '2026-05-06', cs: 'Smyčka',          en: 'A loop' },
-  { date: '2026-05-07', cs: 'Něco malého',     en: 'Something small' },
-  { date: '2026-05-08', cs: 'Stíny',           en: 'Shadow play' },
-  { date: '2026-05-09', cs: 'Proměna',         en: 'Transformation' },
-  { date: '2026-05-10', cs: 'Festivalový moment', en: 'A festival moment' },
+  { date: '2026-05-05', cs: 'Výprava',    en: 'Journey' },
+  { date: '2026-05-06', cs: 'Trojúhelník',          en: 'Triangle' },
+  { date: '2026-05-07', cs: 'Setkání',     en: 'Get together' },
+  { date: '2026-05-08', cs: 'Žížeň',           en: 'Craving' },
+  { date: '2026-05-09', cs: 'Rozmanitost',         en: 'Variety' },
+  { date: '2026-05-10', cs: 'Hora', en: 'Mountain' },
 ]
 
 function todayKey(): string {
